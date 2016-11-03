@@ -2,7 +2,7 @@ setwd("~/Dropbox/smrrxn/")
 
 maledat <- read.csv("data/LDMales_alive.csv")
 
-#Constructing randomisation dataframe
+#Constructing randomisation dataframe for male lizards
 
 randat <- data.frame(period = rep(c(1:10), each = 45),
                      batch = rep(c(1:2), times = c(23, 22)),
@@ -33,35 +33,23 @@ final_randat<- final_randat[order(final_randat$period, final_randat$batch, final
 write.csv(final_randat, file = "data/randomisation.csv", row.names = F) 
 
 
+#Constructing randomisation dataframe for temperatures to incbuators
 
+tempdat <- data.frame(period = rep(c(1:10), each = 24),
+                      batch = rep(c(1:2), each = 12, times = 10),
+                      day = rep(c(1,1,1,1,2,2,2,2,3,3,3,3), times = 10),
+                      incubator = rep(c(1,2,1,2), times = 60))
 
+tempdat <- tempdat[order(tempdat$incubator),]
 
+write.csv(tempdat, file = "data/temprandom.csv", row.names = F)
 
+#day 3 temp
+replicate(20, sample(c(30,32)))
 
-######
+#day 2 temp
+day_2 <- replicate(20, sample(c(26,28)))
 
-B1_ids <- ids[1:23]
-B2_ids <- ids[24:length(ids)]
-
-#Assigning males to incubators for Batch 1
-
-B1_incub_ids <- sample(B1_ids, replace = F)
-B1_I1_ids <- B1_incub_ids[1:12]
-B1_I2_ids <- B1_incub_ids[13:23]
-
-B1_I1_chamber_ids <- sample(B1_I1_ids, replace = F)
-B1_I2_chamber_ids <- sample(B1_I2_ids, replace = F)
-
-B1_I1_chamber_ids <- as.character(B1_I1_chamber_ids)
-B1_I2_chamber_ids  <- as.character(B1_I2_chamber_ids )
-
-randat$male_id <- c(B1_I1_chamber_ids, B1_I2_chamber_ids)
-
-
-#Assigning males to incubators in Batch 2
-
-B2_incub_ids <- sample(B2_ids, replace = F)
-B2_I1_ids <- incub_ids[1:12]
-B2_I2_ids <- incub_ids[13:23]
-
+#day 1 temp
+day_1 <-replicate(20, sample(c(22,24)))
 
