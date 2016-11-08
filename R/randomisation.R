@@ -8,9 +8,27 @@ randat <- data.frame(period = rep(c(1:10), each = 45),
                      batch = rep(c(1:2), times = c(23, 22)),
                      incubator = rep(c(1,2,1,2), times = c(11,12,11,11)),
                      chamber = rep(c(1:23, 1:22), times = 10))
-                              
+
+randat <- randat[order(randat$batch),]                              
 
 #Assigning males to B1 and B2
+
+ids <- sample(maledat$id, replace = F)
+b1_ids <- ids[1:23]
+b2_ids <- ids[24:45]
+
+#Sampling B1 ids for 10 periods
+allb1 <- replicate(10,sample(b1_ids, replace = F))
+allb1 <- unlist(list(allb1))
+
+allb2 <- replicate(10,sample(b2_ids, replace = F))
+allb2 <- unlist(list(allb2))
+
+randat$id <- c(allb1, allb2)
+
+
+
+###########
 ids <- replicate(10,sample(maledat$id, replace = F))
 ids_all <- unlist(list(ids))
 
@@ -26,9 +44,9 @@ str(maledat)
 
 final_randat <- merge(randat, maledat[,1:3])
 
-final_randat <- final_randat[c(2, 3,4,5,1,6,7)]
+final_randat <- final_randat[c(2,3,4,5,1,6,7)]
 
-final_randat<- final_randat[order(final_randat$period, final_randat$batch, final_randat$incubator, final_randat$chamber),]
+final_randat<- final_randat[order(final_randat$period),]
 
 write.csv(final_randat, file = "data/randomisation.csv", row.names = F) 
 
