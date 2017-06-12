@@ -33,4 +33,22 @@ finaldata$co2_pmin <- finaldata$total_co2 / finaldata$t_diff
 
 write.csv(finaldata, row.names = F, "data/data_final/smr_rawfinal.csv")
 
+data <- read.csv("data/data_final/smr_rawfinal.csv")
+str(data)
+data$date <- as.Date(data$date, "%d/%m/%Y")
+
+data$series <-paste(data$id , data$samp_period, sep = "_")
+head(data$series);tail(data$series)
+
+write.csv(data, row.names = F, "data/data_final/ldeli_smr.csv")
+
+data <- read.csv("data/data_final/ldeli_smr.csv")
+pop.data <- read.csv("data/data_final/male_population.csv")
+
+pop.data <- pop.data[,c(1,4)]
+names(pop.data) <- c("id", "site")
+
+newdata <- merge(data, pop.data)
+write.csv(newdata, row.names = F, "data/data_final/ldelipop_smr.csv")
+
 
