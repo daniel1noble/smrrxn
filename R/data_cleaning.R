@@ -136,15 +136,19 @@ ggplot(newdata, aes(co2_pmin, obs, label = obs)) +
   geom_text(check_overlap = T) + 
   theme_bw()
 
-newdata[newdata$obs == 1297,] #BadCO2S
+newdata[newdata$obs == 1297,31] <- NA #BadCO2S
 
-newdata[newdata$obs == 770,]  #BigPT1S2? 
+newdata[newdata$obs == 770, 31] <- NA  #BigPT1S2? 
 newdata[newdata$id == 'ld0069' & newdata$incb_temp == "32",]
 
-newdata[newdata$obs == 244,] #BadT2BL  
+newdata[newdata$obs == 244,31] <- NA  #BadT2BL  
 newdata[newdata$id == 'ld0018' & newdata$incb_temp == "30",]
 
-write.csv(finaldata, row.names = F, "data/data_final/smr_rawfinal.csv")
+newdata[newdata$obs == 1006,] #Could be an outlier
+newdata[newdata$id == 'ld0088' & newdata$incb_temp == "32",]
 
+#Write that csv
+
+write.csv(newdata, row.names = F, "data/data_final/smr_rawfinal.csv")
 
 
