@@ -11,17 +11,15 @@ library(MCMCglmm)
 data <- read.csv("data/data_final/mr_final_analysis.csv")
 
 #priors
-
 expanded.prior <- list(R = list(V = 1, nu = 0.002),
-                       G = list(G1 = list(V = diag(2), nu = 0.002, alpha.V = rep(1000,2,2), alpha.mu = rep(0,2)),
-                                G2 = list(V = diag(2), nu = 0.002, alpha.V = rep(1000,2,2), alpha.mu = rep(0,2))))
+                       G = list(G1 = list(V = diag(2), nu = 0.002, alpha.V = diag(1000,2,2), alpha.mu = rep(0,2)),
+                                G2 = list(V = diag(2), nu = 0.002, alpha.V = diag(1000,2,2), alpha.mu = rep(0,2))))
 
 #final model - 1 chain for now
-
 model.1 <- MCMCglmm(z.log.co2pmin ~ z.log.temp + z.log.mass + z.prior_temp_4,
-                    random = ~us(1+z.log.temp):id + ~us(1+trial):series,
+                    random = ~us(1+z.log.temp):id + ~us(1+z.log.temp):series,
                     family = "gaussian",
-                    prior = my.prior,
+                    prior = expanded.prior,
                     nitt = 5010000,
                     burnin = 10000,
                     thin = 5000,
