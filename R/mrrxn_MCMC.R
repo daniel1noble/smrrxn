@@ -12,8 +12,9 @@ data <- read.csv("data/data_final/mr_final_analysis.csv")
 
 #priors
 
-my.prior <- list(R = list(V =1, nu = 0.002, alpha.V = 1000, alpha.mu = 0),
-                 G = list(G1 = list(V =1, nu = 0.002, alpha.V = 1000, alpha.mu = 0)))
+expanded.prior <- list(R = list(V = 1, nu = 0.002),
+                       G = list(G1 = list(V = diag(2), nu = 0.002, alpha.V = rep(1000,2,2), alpha.mu = rep(0,2)),
+                                G2 = list(V = diag(2), nu = 0.002, alpha.V = rep(1000,2,2), alpha.mu = rep(0,2))))
 
 #final model - 1 chain for now
 
