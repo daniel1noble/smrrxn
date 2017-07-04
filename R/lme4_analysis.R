@@ -45,7 +45,7 @@ AIC(model.1.2) #5345.327
 plot(data$co2_pmin ~ data$z.prior_temp_3)
 plot(data$co2_pmin ~ data$z.log.prior_temp_3)
 
-model.1.3 <- lmer(z.log.co2pmin ~ z.incb_temp + z.log.mass + z.prior_temp_4 + (1+z.incb_temp|id) + (1+z.incb_temp|series), data = data)
+model.1.3 <- lmer(z.log.co2pmin ~ z.incb_temp + z.log.mass + z.log.prior_temp_4 + (1+z.incb_temp|id) + (1+z.incb_temp|series), data = data)
 summary(model.1.3)
 AIC(model.1.3) #5278.598
 
