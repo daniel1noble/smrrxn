@@ -54,13 +54,7 @@ newdata$total_air <- newdata$ch_vol - newdata$lizmass
 newdata$total_co2 <- newdata$frac_co2 * newdata$total_air
 newdata$co2_pmin <- newdata$total_co2 / newdata$t_diff
 
-#data exploring
 #outlier checking
-
-ggplot(newdata,
-       aes(x = incb_temp, y = co2_pmin, group = incb_temp, label = obs)) +
-      geom_boxplot() +
-      geom_text()
 
 #Potential outliers for co2_pmin:  770, 1006, 1297, 244, 1012, 1483, 1181, 1502, 
 
@@ -189,13 +183,17 @@ newdata[newdata$id == "ld0006" & newdata$obs == 96, "lizmass"] <- 19.537
 #newdata$lizmass <- newdata$ch_lizmass - newdata$ch_mass
 
 ###cleveland dot plot for co2: 
+ggplot(newdata,
+       aes(x = incb_temp, y = co2_pmin, group = incb_temp, label = obs)) +
+  geom_boxplot() +
+  geom_text()
 
 ggplot(newdata, aes(co2_pmin, obs, label = obs)) +
   geom_point(colour = "white") +
   geom_text() + 
   theme_bw()
 
-#Potential outliers for co2 > 0.02: #30 rows of data using obs 432 as cut off
+#Potential outliers for co2 > 0.02: 24   25   32  139  244  252  288  295  432  621  660  664  770  773  985 1006 1012 1022 1070 1131 1133 1213 1289 1297 1454 1483 1502 1522 1762 2356 #30 rows of data using obs 432 as cut off
 newdata[newdata$obs == 432,"co2_pmin"]
 vec <- newdata[newdata$co2_pmin > 0.02 ,"obs"] 
 great0.02co2.obs <- vec[!is.na(vec)]
@@ -236,46 +234,22 @@ newdata[newdata$obs == 1918,"body_temp"]
 #Scatterplot of co2~mass with obs labels
 #Outliers 
 
-plot(data$z.log.co2pmin ~ data$z.log.mass)
-plot(data$obs ~ data$z.log.co2pmin)
+plot(log(newdata$co2_pmin) ~ log(newdata$lizmass))
 
-summary(data$z.log.co2pmin)
-
-#Potential outliers for co2 ~ mass
-ggplot(data, aes(y = z.log.co2pmin, x = z.log.mass, label = obs)) +
+ggplot(data, aes(y = log(co2_pmin), x = log(lizmass), label = obs)) +
   geom_point(colour = "white") +
   geom_text() + 
-  scale_x_continuous(limits = c(-4, 3)) + 
-  scale_y_continuous(limits = c(-6, 3)) +
+  #scale_x_continuous(limits = c(-4, 3)) + 
+  #scale_y_continuous(limits = c(-6, 3)) +
   theme_bw()
 
-ggplot(data, aes(z.log.co2pmin, obs, label = obs)) +
-  geom_point(colour = "white") +
-  geom_text() + 
-  theme_bw()
+#Potential outliers: co2~mass obs less than -6.6 on log co2 scale : 113  160  168  242  326  388  401  801 1360 1638 1827 1862 1986 2094 2296 2384
+less6.6logco2mass <- newdata[log(newdata$co2_pmin) < -6.6,"obs"]
+less6.6logco2mass.obs <- less6.6logco2mass[!is.na(less6.6logco2mass)]
 
-data[data$obs == 1501,] #??? Sample 1 and 2 v similar but control is huge
-data[data$obs == 1669,] #Notes BadAll - remove
-data[data$obs == 955,]
-
-ggplot(data, aes(z.log.mass, obs, label = obs)) +
-  geom_point(colour = "white") +
-  geom_text() + 
-  theme_bw()
-
-#Fix respective pairs for second or first temp
-data[data$obs == 390,] #19.961 - 18.187 = 1.774 TYPO? No 18.961 0.774 THIS IS NOT AN OUTLIER
-data[data$obs == 1151,] #18.599 - 17.842 = 0.757 ***previous days = 18.628 - 17.846 = 0.782, 18.191 - 17.438 =  0.753. THIS IS NOT AN OUTLIER
-data[data$obs == 1210,] #18.581 - 17.801 = 0.78  THIS IS NOT AN OUTLIER
-data[data$obs == 1118,] #18.673 - 17.872 = 0.801 THIS IS NOT AN OUTLIER
-data[data$obs == 1063,] #Should be the same as 1118 = 0.801 THIS IS NOT AN OUTLIER
-
-
-
-
-
-
-
+#Potential outliers: co2~mass obs less than -0.8 on log mass scale :  77  117  146  166  560  563 1306 1327 1457 1496 1601 1623 2134 2176 2287 2288 2395 2403
+less1logco2mass <- newdata[log(newdata$lizmass) < -0.8,"obs"]
+less1logco2mass.obs <- less1logco2mass[!is.na(less1logco2mass)]
 
 #Recalcuation of key variables
 newdata$lizmass <- newdata$ch_lizmass - newdata$ch_mass
@@ -309,5 +283,18 @@ data$z.log.prior_temp_3 <- scale(log(data$prior_temp_3))
 data$z.prior_temp_4 <- scale(data$prior_temp_4)
 data$z.log.prior_temp_4 <- scale(log(data$prior_temp_4))
 
+#Boltzman standardisation of temperature predictors
+#myTemperatureInKelvin  <-  1:30 + 273.15
+#inverseKT              <-  1 / 8.62e-5 * ((1 / mean(myTemperatureInKelvin)) - (1 / myTemperatureInKelvin))
+#where 8.62e-5 is the Boltzmann constant (in eV/K). this transformation ensures that your intercept is also independent of temperature (and not only mass), and corresponds to the metabolic rate at mean(myTemperatureInKelvin).
 
+#incb_temp
+data$incb_temp_K <- data$incb_temp + 273.15
+data$inverseK_incb_temp <- 1 / 8.62e-5 * ((1 / mean(data$incb_temp_K)) - (1 /data$incb_temp_K))
+
+#body_temp
+data$body_temp_K <- data$body_temp + 273.15
+data$inverseK_body_temp <- 1 / 8.62e-5 * ((1 / mean(data$body_temp_K)) - (1 /data$body_temp_K))
+
+#prior_temp3, 4
 
