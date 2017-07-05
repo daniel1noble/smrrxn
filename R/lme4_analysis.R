@@ -9,6 +9,8 @@ library(lme4)
 
 data <- read.csv("data/data_final/mr_final_analysis.csv")
 
+#Normality
+
 hist(data$z.incb_temp) ; shapiro.test(data$z.incb_temp)
 hist(log(data$incb_temp)) ; shapiro.test(log(data$incb_temp))
 
@@ -33,6 +35,11 @@ boxplot(data$z.log.mass ~ data$batch)
 boxplot(data$z.log.mass ~ data$incb_num)
 boxplot(data$z.log.mass ~ data$defecate)
 
+#plotting to see if there is non-linear relationship
+boxplot(data$co2_pmin ~ data$incb_temp) #Doesn't look like it
+
+plot(log(data$co2_pmin) ~ log(data$lizmass)) #Doesn't look like it
+
 #Carryover effects of temperature order
 model.1.1 <- lmer(z.log.co2pmin ~ z.incb_temp + z.log.mass + z.body_temp + (1+z.incb_temp|id) + (1+z.incb_temp|series), data = data)
 summary(model.1.1)
@@ -56,6 +63,8 @@ plot(data$co2_pmin ~ data$z.log.prior_temp_4)
 names(data)
 varibs <- c("z.log.co2pmin", "incb_temp", "z.log.mass", "z.prior_temp_3", "z.prior_temp_4")
 cor(data[,varibs],use = "complete.obs") 
+
+pairs(data[,c(varibs)], log = "xy")
 
 #Analysis
 #To use log temp or not
