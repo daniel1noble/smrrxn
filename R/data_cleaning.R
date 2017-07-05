@@ -5,31 +5,32 @@ rm(list = ls())
 library(ggplot2)
 library(dplyr)
 
-data <- read.csv("data/data_final/ldeli_integrate.csv")
-str(data)
-data$date <- as.Date(data$date, "%d/%m/%Y")
+#data <- read.csv("data/data_final/ldeli_integrate.csv")
+#str(data)
+#data$date <- as.Date(data$date, "%d/%m/%Y")
 
-data2 <- data
+#data2 <- data
 
 #correcting bad baselines in CO2 and subtracting CO2 control samples form air samples
-badBLrows <- row.names(data2[which(data2$co2_samp_control > data2$co2_samp_1  | data2$co2_samp_control > data2$co2_samp_2 ),18:20]) 
-length(badBLrows) #64
+#badBLrows <- row.names(data2[which(data2$co2_samp_control > data2$co2_samp_1  | data2$co2_samp_control > data2$co2_samp_2 ),18:20]) 
+#length(badBLrows) #64
 
-data2[rownames(data2) %in% badBLrows,]
+#data2[rownames(data2) %in% badBLrows,]
 
-data2[which( data2$co2_samp_control > data2$co2_samp_1  | data2$co2_samp_control > data2$co2_samp_2 ),18] <- NA
+#data2[which( data2$co2_samp_control > data2$co2_samp_1  | data2$co2_samp_control > data2$co2_samp_2 ),18] <- NA
  
-data2$co2_samp_1_correct <- ifelse(is.na(data2$co2_samp_control), data2$co2_samp_1,data2$co2_samp_1 - data2$co2_samp_control)
+#data2$co2_samp_1_correct <- ifelse(is.na(data2$co2_samp_control), data2$co2_samp_1,data2$co2_samp_1 - #data2$co2_samp_control)
 
-data2$co2_samp_2_correct <- ifelse(is.na(data2$co2_samp_control), data2$co2_samp_2,data2$co2_samp_2 - data2$co2_samp_control)
+#data2$co2_samp_2_correct <- ifelse(is.na(data2$co2_samp_control), data2$co2_samp_2,data2$co2_samp_2 - #data2$co2_samp_control)
 
-data2$frac_co2 <- pmax(data2$co2_samp_1_correct, data2$co2_samp_2_correct)
+#data2$frac_co2 <- pmax(data2$co2_samp_1_correct, data2$co2_samp_2_correct)
 
-write.csv(data2, row.names = F, "data/data_final/corrected_ldeli_integrate.csv") 
+#write.csv(data2, row.names = F, "data/data_final/corrected_ldeli_integrate.csv") 
+
 #### At this point, I opened the excel file and had to manual input frac_co2 values if there was a NA in either data2$co2_samp_1_correct, data2$co2_samp_2_correct. This is why I read it in R below
 
 finaldata <- read.csv("data/data_final/archive/corrected_ldeli_integrate.csv")
-str(finaldata) #2541 obs
+str(finaldata) #2520 obs
 
 #creating series variable
 finaldata$series <-paste(finaldata$id , finaldata$samp_period, sep = "_")
