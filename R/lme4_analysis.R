@@ -113,19 +113,19 @@ summary(model.2.4)
 #print(VarCorr(model.2.1),comp=c("Variance", "Std.Dev."))
 mod2.3 <- data.frame(VarCorr(model.2.3, comp = "Variance"))
 
-mod2.3[4,4] / (mod2.3[4,4] + mod2.3[1,4]) #0.5185752
+mod2.3[4,4] / (mod2.3[4,4] + mod2.3[1,4]) 
 
 #R slope
 
-mod2.3[5,4] / (mod2.3[5,4] + mod2.3[2,4]) #0.3543051
+mod2.3[5,4] / (mod2.3[5,4] + mod2.3[2,4]) 
 
 #R short term
 
-(mod2.3[4,4] +  mod2.3[1,4]) / (mod2.3[4,4] +  mod2.3[1,4] + mod2.3[7,4]) #0.3050962
+(mod2.3[4,4] +  mod2.3[1,4]) / (mod2.3[4,4] +  mod2.3[1,4] + mod2.3[7,4]) 
 
 #R long term
 
-mod2.3[4,4] / (mod2.3[4,4] +  mod2.3[1,4] + mod2.3[7,4]) #0.1582153
+mod2.3[4,4] / (mod2.3[4,4] +  mod2.3[1,4] + mod2.3[7,4])s
 
 #Trying to plot these reaction norms out by groups of 14 lizards
 

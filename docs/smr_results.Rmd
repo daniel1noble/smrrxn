@@ -58,6 +58,27 @@ plot(model.2.3)
 qqnorm(resid(model.2.3)) 
 ```
 
+### Repeatabilty of reaction norms
+
+```{r rptrxnnorm, include = TRUE}
+mod2.3 <- data.frame(VarCorr(model.2.3, comp = "Variance"))
+
+mod2.3[4,4] / (mod2.3[4,4] + mod2.3[1,4]) 
+
+#R slope
+
+mod2.3[5,4] / (mod2.3[5,4] + mod2.3[2,4]) 
+
+#R short term
+
+(mod2.3[4,4] +  mod2.3[1,4]) / (mod2.3[4,4] +  mod2.3[1,4] + mod2.3[7,4]) 
+
+#R long term
+
+mod2.3[4,4] / (mod2.3[4,4] +  mod2.3[1,4] + mod2.3[7,4])
+```
+
+
 ### Plotting reaction norms across series using final model.2.3
 
 ```{r set up for plot, include = FALSE}
