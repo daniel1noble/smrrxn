@@ -5,13 +5,11 @@ rm(list = ls())
 library(ggplot2)
 library(lme4)
 
-#histograms
-
-data <- read.csv("data/data_final/mrrxn_final.csv")
+data <- read.csv("data/data_final/mrrxn_final_v2.csv")
 str(data)
 names(data)
 
-varibs.excl <- c("tc", "date", "ch_num", "key", "ch_mass", "ch_lizmass", "t_flush", "t_samp", "t_diff", "ch_vol", "co2_samp_control", "co2_samp_1", "co2_samp_2", "air_collect_notes", "fms_notes", "co2_warthog_notes", "co2_samp_1_correct", "co2_samp_2_correct", "frac_co2", "total_air", "total_co2")
+#varibs.excl <- c("tc", "date", "ch_num", "key", "ch_mass", "ch_lizmass", "t_flush", "t_samp", "t_diff", "ch_vol", "co2_samp_control", "co2_samp_1", "co2_samp_2", "air_collect_notes", "fms_notes", "co2_warthog_notes", "co2_samp_1_correct", "co2_samp_2_correct", "frac_co2", "total_air", "total_co2")
 
 varibs.need <- c("obs", "samp_period", "id" ,"batch", "series", "incb_num", "incb_temp_id", "defecate", "incb_temp", "z.incb_temp", "z.log.temp", "incb_temp_K", "inverseK_incb_temp", "body_temp", "z.body_temp", "z.log.body_temp", "body_temp_K", "inverseK_body_temp" , "z.prior_temp1", "z.log.prior_temp1", "prior_temp1_K", "inverseK_prior_temp1", "prior_temp2_K", "inverseK_prior_temp2", "z.prior_temp2", "z.log.prior_temp2", "orig_lizmass", "lizmass_nocombout", "log.mass", "z.log.mass","orig_co2_pmin", "co2pm_nocombout", "log.co2pmin", "z.log.co2pmin")
 
@@ -61,12 +59,12 @@ boxplot(data$z.log.mass ~ data$defecate)
 #plotting to see if there is non-linear relationship
 plot(data$z.log.co2pmin  ~ data$inverseK_incb_temp) #Doesn't look like it
 
-plot(data$z.log.co2pmin  ~ data$z.log.mass) #Doesn't look like it
+plot(data$z.log.co2pmin  ~ data$z.log.mass, ylim=c(3,-3)) #Doesn't look like it
 
-ggplot(data, aes(x = z.log.mass, y = z.log.co2pmin, label = obs)) +
+ggplot(data, aes(y = z.log.co2pmin, x = z.log.mass, obs, label = obs)) +
   geom_point(colour = "white") +
   geom_text() + 
-  theme_bw() 
+  theme_bw()   
 
 #Collinearity
 names(data)
@@ -105,6 +103,10 @@ AIC(model.2.3) #5145.008 #This is the best final model
 plot(model.2.3)
 qqnorm(resid(model.2.3)) 
 
+#Check if my slope and intercept for mass is similar to Uyedas
+model.2.4 <- lmer(log.co2pmin ~ inverseK_incb_temp + log.mass + inverseK_prior_temp2 + (1+inverseK_incb_temp|id) + (1+inverseK_incb_temp|series), data = data)
+summary(model.2.4)
+
 #Analysis
 
 #R intercept
@@ -125,14 +127,53 @@ mod2.3[5,4] / (mod2.3[5,4] + mod2.3[2,4]) #0.3543051
 
 mod2.3[4,4] / (mod2.3[4,4] +  mod2.3[1,4] + mod2.3[7,4]) #0.1582153
 
+#Trying to plot these reaction norms out by groups of 14 lizards
 
+ids_order <- sort(unique(data$id))
+g1 <- ids_order[1:14]
+g2 <- ids_order[15:28]
+g3 <- ids_order[29:42]
 
+predictors <- c("z.log.co2pmin", "inverseK_incb_temp", "z.log.mass", "inverseK_prior_temp2" , "id" ,"series")
 
+plot.data <- data[complete.cases(data[ , predictors ]),]
+plot.data$z.log.co2pm_pred <- predict(model.2.3, type = "response")
+plot.data$log.co2pm_pred <- (plot.data$z.log.co2pm_pred * sd(plot.data$log.co2pmin)) + mean(plot.data$log.co2pmin)
+plot.data$co2pm_pred <- exp(plot.data$log.co2pm_pred)
 
+g1.dat <- plot.data[plot.data$id %in% g1,]
+g2.dat <- plot.data[plot.data$id %in% g2,]
+g3.dat <- plot.data[plot.data$id %in% g3,]
 
+#g1
+ggplot(g1.dat, aes(y = z.log.co2pm_pred, 
+                   x = inverseK_incb_temp,
+                   group = id, 
+                   colour = id)) +
+  geom_point() +
+  geom_line() + 
+  facet_wrap( ~ samp_period, nrow = 2) +
+  theme_bw()   
 
+#g2
+ggplot(g2.dat, aes(y = z.log.co2pm_pred, 
+                   x = inverseK_incb_temp,
+                   group = id, 
+                   colour = id)) +
+  geom_point() +
+  geom_line() + 
+  facet_wrap( ~ samp_period, nrow = 2) +
+  theme_bw() 
 
-
+#g3
+ggplot(g3.dat, aes(y = z.log.co2pm_pred, 
+                   x = inverseK_incb_temp,
+                   group = id, 
+                   colour = id)) +
+  geom_point() +
+  geom_line() + 
+  facet_wrap( ~ samp_period, nrow = 2) +
+  theme_bw() 
 
 
 

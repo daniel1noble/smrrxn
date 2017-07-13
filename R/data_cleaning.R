@@ -3,7 +3,6 @@ setwd("~/Dropbox/smrrxn/")
 rm(list = ls())
 
 library(ggplot2)
-library(dplyr)
 
 #data <- read.csv("data/data_final/ldeli_integrate.csv")
 #str(data)
@@ -66,7 +65,7 @@ ggplot(newdata, aes(lizmass, obs, label = obs)) +
   geom_text() + 
   theme_bw()         
 
-#Potential outliers for mass:  359, 377  - typos in ch_mass
+#Potential outliers for mass:  356, 379  - typos in ch_mass
 
 newdata[newdata$obs == 379, "ch_mass"] <- 18.195
 newdata[newdata$obs == 356, "ch_mass"] <-  17.824 
@@ -250,8 +249,6 @@ newdata[newdata$id == "ld0140","body_temp"]
 #Scatterplot of co2~mass with obs labels
 #Outliers 
 
-plot(log(newdata$co2_pmin) ~ log(newdata$lizmass))
-
 #Potential outliers: co2~mass obs less than -7.5 on log co2 scale : 1348, 1836
 less7.5logco2mass <- newdata[log(newdata$co2_pmin) < -7.5,"obs"]
 less7.5logco2mass.obs <- less7.5logco2mass[!is.na(less7.5logco2mass)]
@@ -264,7 +261,11 @@ less0.5logco2mass.obs <- less0.5logco2mass[!is.na(less0.5logco2mass)]
 great0.5logco2mass <- newdata[log(newdata$lizmass) > 0.5,'obs']
 great0.5logco2mass.obs <- great0.5logco2mass[!is.na(great0.5logco2mass)]
 
-co2massout <- c(less7.5logco2mass.obs, less0.5logco2mass.obs, great0.5logco2mass)
+#Potential outliers: co2~mass obs less than -3 on log scale :  2061  180  311  160  372 1978 1842  240  797
+less3zco2 <- newdata[scale(log(newdata$co2_pmin)) < -3, "obs"]
+less3zco2.obs <- less3zco2[!is.na(less3zco2)]
+
+co2massout <- c(less7.5logco2mass.obs, less0.5logco2mass.obs, great0.5logco2mass, less3zco2.obs)
 co2massout.obs <- co2massout[!is.na(co2massout)]
 
 newdata$co2mass_outlier <- ifelse(newdata$obs %in% co2massout.obs, 1,  0)
@@ -282,6 +283,12 @@ newdata$inverseK_incb_temp <- 1 / 8.62e-5 * ((1 / mean(newdata$incb_temp_K)) - (
 newdata$body_temp_K <- newdata$body_temp + 273.15
 newdata$inverseK_body_temp <- 1 / 8.62e-5 * ((1 / mean(newdata$body_temp_K, na.rm =T)) - (1 /newdata$body_temp_K))
 
+#Recalcuation of key variables
+newdata$lizmass <- newdata$ch_lizmass - newdata$ch_mass
+newdata$total_air <- newdata$ch_vol - newdata$lizmass
+newdata$total_co2 <- newdata$frac_co2 * newdata$total_air
+newdata$co2_pmin <- newdata$total_co2 / newdata$t_diff
+
 #Write newdata as csv
 
 write.csv(newdata,row.names = F, "data/data_final/mrrxn_orig.csv")
@@ -289,12 +296,8 @@ write.csv(newdata,row.names = F, "data/data_final/mrrxn_orig.csv")
 #Read in data again after putting NA in mass and co2 if allcomb_outlier indicator = 1 and creating prior_temp1 and prior_temp2
 newdata <- read.csv("data/data_final/mrrxn_orig.csv")
 str(newdata) #2520 obs
-
-#Recalcuation of key variables
-newdata$lizmass <- newdata$ch_lizmass - newdata$ch_mass
-newdata$total_air <- newdata$ch_vol - newdata$lizmass
-newdata$total_co2 <- newdata$frac_co2 * newdata$total_air
-newdata$co2_pmin <- newdata$total_co2 / newdata$t_diff
+newdata$lizmass_nocombout <- as.numeric(newdata$lizmass_nocombout)
+newdata$co2pm_nocombout<- as.numeric(newdata$co2pm_nocombout)
 
 #standardising and transforming variables
 
@@ -335,4 +338,16 @@ newdata$prior_temp2_K <- newdata$prior_temp2 + 273.15
 newdata$inverseK_prior_temp2 <- 1 / 8.62e-5 * ((1 / mean(newdata$prior_temp2_K, na.rm =T)) - (1 /newdata$prior_temp2_K))
 
 View(newdata)
-write.csv(newdata, row.names = F, "data/data_final/mrrxn_final.csv")
+write.csv(newdata, row.names = F, "data/data_final/mrrxn_final_v2.csv")
+
+plot(z.log.co2pmin~z.log.mass, data =newdata, ylim = c(-3,3))
+
+ggplot(newdata, aes(y = z.log.co2pmin, x = z.log.mass, obs, label = obs)) +
+  geom_point(colour = "white") +
+  geom_text() + 
+  theme_bw()         
+
+
+
+
+
