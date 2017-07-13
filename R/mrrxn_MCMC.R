@@ -8,7 +8,7 @@ library(MCMCglmm)
 
 #read in data
 
-data <- read.csv("data/data_final/mrrxn_final.csv")
+data <- read.csv("data/data_final/mrrxn_final_v2.csv")
 data$id <- as.factor(data$id)
 data$series <- as.factor(data$series)
 
