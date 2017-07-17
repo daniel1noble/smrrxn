@@ -56,7 +56,7 @@ boxplot(data$z.log.mass ~ data$batch)
 boxplot(data$z.log.mass ~ data$incb_num)
 boxplot(data$z.log.mass ~ data$defecate)
 
-#plotting to see if there is non-linear relationship
+#plotting to see if there is non-linear relationship with temperature
 plot(data$z.log.co2pmin  ~ data$inverseK_incb_temp) #Doesn't look like it
 
 plot(data$z.log.co2pmin  ~ data$z.log.mass, ylim=c(3,-3)) #Doesn't look like it
@@ -98,7 +98,7 @@ plot(model.2.2)
 qqnorm(resid(model.2.2))
 
 model.2.3 <- lmer(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2 + (1+inverseK_incb_temp|id) + (1+inverseK_incb_temp|series), data = data)
-summary(model.2.3)
+ summary(model.2.3)
 AIC(model.2.3) #5145.008 #This is the best final model 
 plot(model.2.3)
 qqnorm(resid(model.2.3)) 
@@ -107,7 +107,7 @@ qqnorm(resid(model.2.3))
 model.2.4 <- lmer(log.co2pmin ~ inverseK_incb_temp + log.mass + inverseK_prior_temp2 + (1+inverseK_incb_temp|id) + (1+inverseK_incb_temp|series), data = data)
 summary(model.2.4)
 
-#Analysis
+#Analysis Repeatability of metabolic rate
 
 #R intercept
 #print(VarCorr(model.2.1),comp=c("Variance", "Std.Dev."))
@@ -122,10 +122,81 @@ mod2.3[5,4] / (mod2.3[5,4] + mod2.3[2,4])
 #R short term
 
 (mod2.3[4,4] +  mod2.3[1,4]) / (mod2.3[4,4] +  mod2.3[1,4] + mod2.3[7,4]) 
-
 #R long term
 
-mod2.3[4,4] / (mod2.3[4,4] +  mod2.3[1,4] + mod2.3[7,4])s
+mod2.3[4,4] / (mod2.3[4,4] +  mod2.3[1,4] + mod2.3[7,4])
+
+#Repeatabilty of metabolic rate at each temp
+predictors <- c("z.log.co2pmin", "z.log.mass", "inverseK_prior_temp2", "id", "series")
+
+unique(data$incb_temp)
+
+twtwo_dat <- data[data$incb_temp == 22,]
+model.3.1 <- lmer(z.log.co2pmin ~ z.log.mass + inverseK_prior_temp2 + samp_period + (1|id), data = twtwo_dat)
+summary(model.3.1)
+plot(model.3.1)
+qqnorm(resid(model.3.1)) 
+mod3.1 <- data.frame(VarCorr(model.3.1, comp = "Variance"))
+mod3.1[1,4] / (mod3.1[2,4] + mod3.1[1,4]) 
+
+twfr_dat <- data[data$incb_temp == 24,]
+model.3.2 <- lmer(z.log.co2pmin ~ z.log.mass + inverseK_prior_temp2 + samp_period + (1|id), data = twfr_dat)
+summary(model.3.2)
+plot(model.3.2)
+qqnorm(resid(model.3.2))
+mod3.2 <- data.frame(VarCorr(model.3.2, comp = "Variance"))
+mod3.2[1,4] / (mod3.2[2,4] + mod3.2[1,4]) 
+
+twsx_dat <- data[data$incb_temp == 26,]
+model.3.3 <- lmer(z.log.co2pmin ~ z.log.mass + inverseK_prior_temp2 + samp_period + (1|id), data = twsx_dat)
+summary(model.3.3)
+plot(model.3.3)
+qqnorm(resid(model.3.3))
+mod3.3 <- data.frame(VarCorr(model.3.3, comp = "Variance"))
+mod3.3[1,4] / (mod3.3[2,4] + mod3.3[1,4]) 
+
+twet_dat <- data[data$incb_temp == 28,]
+model.3.4 <- lmer(z.log.co2pmin ~ z.log.mass + inverseK_prior_temp2 + samp_period + (1|id), data = twet_dat)
+summary(model.3.4)
+plot(model.3.4)
+qqnorm(resid(model.3.4))
+mod3.4 <- data.frame(VarCorr(model.3.4, comp = "Variance"))
+mod3.4[1,4] / (mod3.4[2,4] + mod3.4[1,4]) 
+
+thrt_dat <- data[data$incb_temp == 30,]
+model.3.5 <- lmer(z.log.co2pmin ~ z.log.mass + inverseK_prior_temp2 + samp_period + (1|id), data = thrt_dat)
+summary(model.3.5)
+plot(model.3.5)
+qqnorm(resid(model.3.5))
+mod3.5 <- data.frame(VarCorr(model.3.5, comp = "Variance"))
+mod3.5[1,4] / (mod3.5[2,4] + mod3.5[1,4]) 
+
+thrttw_dat <- data[data$incb_temp == 32,]
+model.3.6 <- lmer(z.log.co2pmin ~ z.log.mass + inverseK_prior_temp2 + samp_period + (1|id), data = thrttw_dat)
+summary(model.3.6)
+plot(model.3.6)
+qqnorm(resid(model.3.6))
+mod3.6 <- data.frame(VarCorr(model.3.6, comp = "Variance"))
+mod3.6[1,4] / (mod3.6[2,4] + mod3.6[1,4]) 
+
+rpt.plot <- data.frame(temp = sort(unique(data$incb_temp)),
+              rpt = c( mod3.1[1,4] / (mod3.1[2,4] + mod3.1[1,4]),
+                       mod3.2[1,4] / (mod3.2[2,4] + mod3.2[1,4]),
+                       mod3.3[1,4] / (mod3.3[2,4] + mod3.3[1,4]),
+                       mod3.4[1,4] / (mod3.4[2,4] + mod3.4[1,4]),
+                       mod3.5[1,4] / (mod3.5[2,4] + mod3.5[1,4]),
+                       mod3.6[1,4] / (mod3.6[2,4] + mod3.6[1,4])))
+
+ggplot(rpt.plot, aes(y = rpt,
+                     x = temp)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(name = "Temperature",
+                     limits= c(22, 32),
+                     breaks= seq(22,32,2)) + 
+  scale_y_continuous(name = "Adjusted repeatability",
+                     limits = c(0, 0.25)) + 
+  theme_bw()   
 
 #Trying to plot these reaction norms out by groups of 14 lizards
 
@@ -175,6 +246,55 @@ ggplot(g3.dat, aes(y = z.log.co2pm_pred,
   facet_wrap( ~ samp_period, nrow = 2) +
   theme_bw() 
 
+#Plot all reaction norms for each series, for each individual 
+ggplot(g1.dat, aes(y = z.log.co2pm_pred, 
+                   x = inverseK_incb_temp,
+                   group = as.factor(samp_period), 
+                   colour = as.factor(samp_period))) +
+  geom_point() +
+  geom_line() + 
+  facet_wrap( ~ id, nrow = 2) +
+  theme_bw() +
+  scale_colour_discrete(name = "Sampling period") 
 
+ggplot(g2.dat, aes(y = z.log.co2pm_pred, 
+                   x = inverseK_incb_temp,
+                   group = as.factor(samp_period), 
+                   colour = as.factor(samp_period))) +
+  geom_point() +
+  geom_line() + 
+  facet_wrap( ~ id, nrow = 2) +
+  theme_bw() +
+  scale_colour_discrete(name = "Sampling period") 
 
+ggplot(g3.dat, aes(y = z.log.co2pm_pred, 
+                   x = inverseK_incb_temp,
+                   group = as.factor(samp_period), 
+                   colour = as.factor(samp_period))) +
+  geom_point() +
+  geom_line() + 
+  facet_wrap( ~ id, nrow = 2) +
+  theme_bw() +
+  scale_colour_discrete(name = "Sampling period") 
 
+#Try and plot intercept and slope for each lizard
+
+intslope.plot <- coef(model.2.3)$series
+nrow(intslope.plot)
+
+intslope.plot$series <- row.names(intslope.plot)
+unlist_series <- unlist(strsplit(intslope.plot$series, "_"))
+
+write.csv(intslope.plot, "test.csv")
+intslope.dat <- read.csv("data/intslope.csv")
+
+ggplot(intslope.dat, aes(y = Intercept, 
+                         x = inverseK_incb_temp, 
+                         colour = id)) +
+  geom_point() +
+  scale_x_continuous(name = "Slope for temperature") + 
+  facet_wrap( ~ samp_period, nrow = 2) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+#How repeatable is body mass?
