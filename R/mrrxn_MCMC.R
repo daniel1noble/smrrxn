@@ -44,8 +44,62 @@ model.1 <- MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_p
 
 
 saveRDS(model.1, "output/model.1")
+model.1 <- readRDS("output/model.1")
 
-plot(model.1)
-summary(model.1)
+plot(model.1$Sol)
+summary(model.1$Sol)
+HPDinterval(model.1$Sol)
+
+heidel.diag(model.1$Sol)  
+geweke.diag(model.1$Sol)
+
+autocorr.diag(model.1$Sol)
+autocorr.plot(model.1$Sol)
+
+plot(model.1$VCV)
+summary(model.1$VCV)
+HPDinterval(model.1$VCV)
+
+heidel.diag(model.1$VCV)  
+geweke.diag(model.1$VCV)
+
+autocorr.diag(model.1$VCV)
+autocorr.plot(model.1$VCV)
 
 
+#final model - 1 chain for now
+model.2 <- MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2,
+                    random = ~us(1+inverseK_incb_temp):id + us(1+inverseK_incb_temp):series,
+                    family = "gaussian",
+                    prior = expanded.prior,
+                    nitt = 7510000,
+                    burnin = 10000,
+                    thin = 5000,
+                    data = dat, 
+                    verbose = T)
+
+
+saveRDS(model.2, "output/model.2")
+model.2 <- readRDS("output/model.2")
+
+summary(model.2)
+
+plot(model.2$Sol)
+summary(model.2$Sol)
+HPDinterval(model.2$Sol)
+
+heidel.diag(model.2$Sol)  
+geweke.diag(model.2$Sol)
+
+autocorr.diag(model.2$Sol)
+autocorr.plot(model.2$Sol)
+
+plot(model.2$VCV)
+summary(model.2$VCV)
+HPDinterval(model.2$VCV)
+
+heidel.diag(model.2$VCV)  
+geweke.diag(model.2$VCV)
+
+autocorr.diag(model.2$VCV)
+autocorr.plot(model.2$VCV)
