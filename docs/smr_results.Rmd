@@ -58,7 +58,7 @@ plot(model.2.3)
 qqnorm(resid(model.2.3)) 
 ```
 
-### Repeatabilty of reaction norms
+### Repeatabilty of reaction norms from lmer()
 
 ```{r rptrxnnorm, include = TRUE}
 mod2.3 <- data.frame(VarCorr(model.2.3, comp = "Variance"))
@@ -76,6 +76,14 @@ mod2.3[5,4] / (mod2.3[5,4] + mod2.3[2,4])
 #R long term
 
 mod2.3[4,4] / (mod2.3[4,4] +  mod2.3[1,4] + mod2.3[7,4])
+
+```
+
+### Repeatabilty of reaction norms from lmer()
+
+```{r mcmc rptr, include = TRUE}
+Table1 <- read.csv("../output/table/Table1.csv")
+Table1
 ```
 
 
