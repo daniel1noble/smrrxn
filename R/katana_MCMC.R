@@ -45,4 +45,4 @@ m1 <- mclapply(1:3, function(i) {
            verbose = T)
 }, mc.cores = 3)
 
-saveRDS(m1, "output/rds/m1)
+saveRDS(m1, "R/m1")
