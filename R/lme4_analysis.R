@@ -98,7 +98,7 @@ plot(model.2.2)
 qqnorm(resid(model.2.2))
 
 model.2.3 <- lmer(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2 + (1+inverseK_incb_temp|id) + (1+inverseK_incb_temp|series), data = data)
- summary(model.2.3)
+summary(model.2.3)
 AIC(model.2.3) #5145.008 #This is the best final model 
 plot(model.2.3)
 qqnorm(resid(model.2.3)) 
@@ -106,6 +106,23 @@ qqnorm(resid(model.2.3))
 #Check if my slope and intercept for mass is similar to Uyedas
 model.2.4 <- lmer(log.co2pmin ~ inverseK_incb_temp + log.mass + inverseK_prior_temp2 + (1+inverseK_incb_temp|id) + (1+inverseK_incb_temp|series), data = data)
 summary(model.2.4)
+
+
+#Checking when temperature and body mass is adding variation to within or between individual variation? 
+model.2.5 <- lmer(log.co2pmin ~ (1|id) + (1|series), data = data)
+summary(model.2.5)
+mod2.5 <- data.frame(VarCorr(model.2.5, comp = "Variance"))
+(mod2.5[2,4] + mod2.5[1,4]) / (mod2.5[2,4] + mod2.5[1,4] +  mod2.5[3,4])
+
+model.2.6 <- lmer(log.co2pmin ~ inverseK_incb_temp + (1|id) + (1|series), data = data)
+summary(model.2.6)
+mod2.6 <- data.frame(VarCorr(model.2.6, comp = "Variance"))
+(mod2.6[2,4] + mod2.6[1,4]) / (mod2.6[2,4] + mod2.6[1,4] +  mod2.6[3,4])
+
+model.2.7 <- lmer(log.co2pmin ~ inverseK_incb_temp + z.log.mass + (1|id) + (1|series), data = data)
+summary(model.2.7)
+mod2.7 <- data.frame(VarCorr(model.2.7, comp = "Variance"))
+(mod2.7[2,4] + mod2.7[1,4]) / (mod2.7[2,4] + mod2.7[1,4] +  mod2.7[3,4])
 
 #Analysis Repeatability of metabolic rate
 
@@ -297,4 +314,3 @@ ggplot(intslope.dat, aes(y = Intercept,
   theme_bw() +
   theme(legend.position = "none")
 
-#How repeatable is body mass?
