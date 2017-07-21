@@ -61,112 +61,27 @@ Table1[15,2:3] <- Table1[5,2:3] / (Table1[5,2:3] + Table1[8,2:3] + Table1[11,2:3
 write.csv(Table1, "output/table/Table1.csv")
 write.csv(round(Table1,2), "output/table/Table1_rounded.csv")
 
+#trying to make predictions
+
+source("R/MCMCchains_function.R")
+
+m1 <- MCMC.chains("output/rds/m1")
+str(m1)
+names(data) 
+
+newdata = data.frame(inverseK_incb_temp = rep(c(-0.6547592,  0.6333022, -0.1292009,  0.1283428, -0.3902114,  0.3824882),42*10),
+                     z.log.mass = rep(0, 420*6),
+                     inverseK_prior_temp2 = rep(-0.001947, 420*6),
+                     id = rep(unique(data$id), 10*6),
+                     series = rep(seq(1:10), each = 42*6))
+
+X <-model.matrix(~inverseK_incb_temp + z.log.mass + inverseK_prior_temp2 , data=newdata)
+
+beta <- m1$solVCVchain$Sol[,1]
+
+newdata$pred_zco2pm <- X %*% beta
+newdata$pred_logco2pm <-(newdata$pred_zco2pm * sd(newdata$pred_zco2pm)) + mean(newdata$pred_zco2pm)
+newdata$pred_co2pm <- exp(newdata$pred_logco2pm)
 
 
-#data for analysis
-
-data <- read.csv("data/data_final/mrrxn_final_v2.csv")
-data$id <- as.factor(data$id)
-data$series <- as.factor(data$series)
-
-varibs.need <- c("obs", "samp_period", "id" ,"batch", "series", "incb_num", "incb_temp_id", "defecate", "incb_temp", "z.incb_temp", "z.log.temp", "incb_temp_K", "inverseK_incb_temp", "body_temp", "z.body_temp", "z.log.body_temp", "body_temp_K", "inverseK_body_temp" , "z.prior_temp1", "z.log.prior_temp1", "prior_temp1_K", "inverseK_prior_temp1", "prior_temp2_K", "inverseK_prior_temp2", "z.prior_temp2", "z.log.prior_temp2", "orig_lizmass", "lizmass_nocombout", "log.mass", "z.log.mass","orig_co2_pmin", "co2pm_nocombout", "log.co2pmin", "z.log.co2pmin")
-
-incl.vars <- names(data) %in% varibs.need
-data <- data[incl.vars]
-
-predictors <- c("z.log.co2pmin", "inverseK_incb_temp", "z.log.mass", "inverseK_prior_temp2", "id", "series")
-
-dat <- data[complete.cases(data[,predictors]),]
-str(dat)
-
-#priors
-expanded.prior <- list(R = list(V = 1, nu = 0.002),
-                       G = list(G1 = list(V = diag(2), nu = 0.002, alpha.V = diag(1000,2,2), alpha.mu = rep(0,2)),
-                                G2 = list(V = diag(2), nu = 0.002, alpha.V = diag(1000,2,2), alpha.mu = rep(0,2))))
-
-#IW.prior <- list(R = list(V = 1, nu = 0.002),
-#                    G = list(G1 = list(V = diag(2), nu = 0.002),
-#                             G2 = list(V = diag(2), nu = 0.002)))
-
-#final model - 1 chain for now
-#model.1 <- MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2,
-#                    random = ~us(1+inverseK_incb_temp):id + us(1+inverseK_incb_temp):series,
-#                    family = "gaussian",
-#                    prior = expanded.prior,
-#                    nitt = 5010000,
-#                    burnin = 10000,
-#                    thin = 5000,
-#                    data = dat, 
-#                    verbose = T)
-
-
-#saveRDS(model.1, "output/rds/model.1")
-#model.1 <- readRDS("output/rds/model.1")
-
-#plot(model.1$Sol)
-#summary(model.1$Sol)
-#HPDinterval(model.1$Sol)
-
-#heidel.diag(model.1$Sol)  
-#geweke.diag(model.1$Sol)
-
-#autocorr.diag(model.1$Sol)
-#autocorr.plot(model.1$Sol)
-
-#plot(model.1$VCV)
-#summary(model.1$VCV)
-#HPDinterval(model.1$VCV)
-
-#heidel.diag(model.1$VCV)  
-#geweke.diag(model.1$VCV)
-
-#autocorr.diag(model.1$VCV)
-#autocorr.plot(model.1$VCV)
-
-#final model - 1 chain for now
-model.2 <- MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2,
-                    random = ~us(1+inverseK_incb_temp):id + us(1+inverseK_incb_temp):series,
-                    family = "gaussian",
-                    prior = expanded.prior,
-                    nitt = 7510000,
-                    burnin = 10000,
-                    thin = 5000,
-                    data = dat, 
-                    verbose = T)
-
-
-#saveRDS(model.2, "output/rds/model.2")
-model.2 <- readRDS("output/rds/model.2")
-
-summary(model.2)
-
-#model diagnostics for fixed efs
-plot(model.2$Sol)
-heidel.diag(model.2$Sol)  
-geweke.diag(model.2$Sol)
-autocorr.diag(model.2$Sol)
-autocorr.plot(model.2$Sol)
-
-#model diagnostics for rand efs
-plot(model.2$VCV)
-heidel.diag(model.2$VCV)  
-geweke.diag(model.2$VCV)
-autocorr.diag(model.2$VCV)
-autocorr.plot(model.2$VCV)
-
-#output for fix efs
-summary(model.2$Sol)
-posterior.mode(model.2$Sol)
-HPDinterval(model.2$Sol)
-
-#output for ran efs
-summary(model.2$VCV)
-posterior.mode(model.2$VCV)
-HPDinterval(model.2$VCV)
-
-
-
-
-
-
-
+predict.MCMCglmm(m1, newdata = newdata)
