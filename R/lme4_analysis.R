@@ -15,7 +15,7 @@ varibs.need <- c("obs", "samp_period", "id" ,"batch", "series", "incb_num", "inc
 
 incl.vars <- names(data) %in% varibs.need
 data <- data[incl.vars]
-View(data)
+#View(data)
 str(data)
 
 #Normality
@@ -61,6 +61,9 @@ plot(data$z.log.co2pmin  ~ data$inverseK_incb_temp) #Doesn't look like it
 
 plot(data$z.log.co2pmin  ~ data$z.log.mass, ylim=c(3,-3)) #Doesn't look like it
 
+scatter.smooth(data$z.log.co2pmin ~ data$inverseK_incb_temp) 
+scatter.smooth(data$z.log.co2pmin ~ data$inverseK_incb_temp) 
+
 ggplot(data, aes(y = z.log.co2pmin, x = z.log.mass, obs, label = obs)) +
   geom_point(colour = "white") +
   geom_text() + 
@@ -99,14 +102,13 @@ qqnorm(resid(model.2.2))
 
 model.2.3 <- lmer(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2 + (1+inverseK_incb_temp|id) + (1+inverseK_incb_temp|series), data = data)
 summary(model.2.3)
-AIC(model.2.3) #5145.008 #This is the best final model 
+AIC(model.2.3) #5106.399 #This is the best final model 
 plot(model.2.3)
 qqnorm(resid(model.2.3)) 
 
 #Check if my slope and intercept for mass is similar to Uyedas
 model.2.4 <- lmer(log.co2pmin ~ inverseK_incb_temp + log.mass + inverseK_prior_temp2 + (1+inverseK_incb_temp|id) + (1+inverseK_incb_temp|series), data = data)
 summary(model.2.4)
-
 
 #Checking when temperature and body mass is adding variation to within or between individual variation? 
 model.2.5 <- lmer(log.co2pmin ~ (1|id) + (1|series), data = data)
@@ -234,6 +236,25 @@ g2.dat <- plot.data[plot.data$id %in% g2,]
 g3.dat <- plot.data[plot.data$id %in% g3,]
 
 #g1
+g1.dat$plot_samp_p <- as.factor(g1.dat$samp_period)
+levels(g1.dat$plot_samp_p) <- paste0("Sampling series ", levels(g1.dat$plot_samp_p))
+
+ggplot(g1.dat, aes(y = z.log.co2pm_pred, 
+                   x = inverseK_incb_temp,
+                   group = id)) +
+  geom_point(shape = 1, fill = "white", size = 1) +
+  geom_line(aes(colour = id)) + 
+  facet_wrap( ~ plot_samp_p, nrow = 2) +
+  labs(x = "Temperature (1/K)", y = expression(Metabolic~rate~(CO[2]~min^{-1}))) +
+  theme_bw() + 
+  theme(legend.position = "none",
+      #panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(colour = "black"))
+
+expression(Metabolic~rate~~~~~~~~~~~~CO[2]^{-1})
+
 ggplot(g1.dat, aes(y = z.log.co2pm_pred, 
                    x = inverseK_incb_temp,
                    group = id, 
@@ -241,7 +262,7 @@ ggplot(g1.dat, aes(y = z.log.co2pm_pred,
   geom_point() +
   geom_line() + 
   facet_wrap( ~ samp_period, nrow = 2) +
-  theme_bw()   
+  theme_bw()    
 
 #g2
 ggplot(g2.dat, aes(y = z.log.co2pm_pred, 
