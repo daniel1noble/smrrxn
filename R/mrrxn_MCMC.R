@@ -6,7 +6,64 @@ rm(list = ls())
 #load library
 library(MCMCglmm)
 
-#read in data
+m1 <- readRDS("output/rds/m1")
+
+m1.S <- lapply(m1, function(m) m$Sol)
+m1.Sol <- do.call(mcmc.list, m1.S)
+
+m1.V <- lapply(m1, function(m) m$VCV)
+m1.VCV <- do.call(mcmc.list, m1.V)
+
+gelman.diag(m1.Sol)
+summary(m1.Sol)
+posterior.mode(m1.Sol)
+HPDinterval(as.mcmc(rbind(m1.Sol[[1]], m1.Sol[[2]], m1.Sol[[3]])))
+
+gelman.diag(m1.VCV, multivariate = F)
+summary(m1.VCV)
+posterior.mode(m1.VCV)
+HPDinterval(as.mcmc(rbind(m1.1[[1]], m1.1[[2]], m1.1[[3]])))
+
+#Tabulating the model output
+
+Table1 <- data.frame(matrix(nrow = 15 , ncol = 3))
+rownames(Table1) <- c("Interpcet", "inverseK_incb_temp", "z.log.mass", "inverseK_prior_temp2",
+                      "(Intercept).id", "(Intercept):inverseK_incb_temp.id", "inverseK_incb_temp:inverseK_incb_temp.id",
+                      "(Intercept).series", "(Intercept):inverseK_incb_temp.series", "inverseK_incb_temp:inverseK_incb_temp.series",
+                      "e", "Rint", "Rslope", "Rshort", "Rlong")
+colnames(Table1) <- c("estimate", "lower", "upper")
+
+#Tabulating fixed efs and CIs
+Table1[1:4, 1] <- posterior.mode(m1.Sol)
+Table1[1:4, 2:3] <- HPDinterval(as.mcmc(rbind(m1.Sol[[1]], m1.Sol[[2]], m1.Sol[[3]])))
+
+#Tabulating ran efs and CIs
+Table1[5:11, 1] <- posterior.mode(m1.VCV)[c(1,2,4,5,6,8,9)]
+Table1[5:11, 2:3] <- HPDinterval(as.mcmc(rbind(m1.VCV[[1]], m1.VCV[[2]], m1.VCV[[3]])))[c(1,2,4,5,6,8,9),]
+
+#Tabulating repeatabilities and CIs
+#Rint
+Table1[12,1] <- Table1[5,1] / (Table1[5,1] + Table1[8,1]) #Rint
+Table1[12,2:3] <- Table1[5,2:3] / (Table1[5,2:3] + Table1[8,2:3]) #Rin CIs
+
+#Rslope
+Table1[13,1] <- Table1[6,1] / (Table1[6,1] + Table1[9,1]) #Rslope
+Table1[13,2:3] <- Table1[6,2:3] / (Table1[6,2:3] + Table1[9,2:3]) #Rslope CIs
+
+#Rshort
+Table1[14,1] <- (Table1[5,1] + Table1[8,1]) / (Table1[5,1] + Table1[8,1] + Table1[11,1]) #Rshort
+Table1[14,2:3] <- (Table1[5,2:3] + Table1[8,2:3]) / (Table1[5,2:3] + Table1[8,2:3] + Table1[11,2:3]) #Rshort CIs
+
+#Rlong
+Table1[15,1] <- Table1[5,1] / (Table1[5,1] + Table1[8,1] + Table1[11,1]) #Rlong
+Table1[15,2:3] <- Table1[5,2:3] / (Table1[5,2:3] + Table1[8,2:3] + Table1[11,2:3]) #Rlong CIs
+
+write.csv(Table1, "output/table/Table1.csv")
+write.csv(round(Table1,2), "output/table/Table1_rounded.csv")
+
+
+
+#data for analysis
 
 data <- read.csv("data/data_final/mrrxn_final_v2.csv")
 data$id <- as.factor(data$id)
@@ -66,7 +123,6 @@ expanded.prior <- list(R = list(V = 1, nu = 0.002),
 #autocorr.diag(model.1$VCV)
 #autocorr.plot(model.1$VCV)
 
-
 #final model - 1 chain for now
 model.2 <- MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2,
                     random = ~us(1+inverseK_incb_temp):id + us(1+inverseK_incb_temp):series,
@@ -108,69 +164,9 @@ summary(model.2$VCV)
 posterior.mode(model.2$VCV)
 HPDinterval(model.2$VCV)
 
-#Tabulating the model output
-
-Table1 <- data.frame(matrix(nrow = 15 , ncol = 3))
-rownames(Table1) <- c("Interpcet", "inverseK_incb_temp", "z.log.mass", "inverseK_prior_temp2",
-                      "(Intercept).id", "(Intercept):inverseK_incb_temp.id", "inverseK_incb_temp:inverseK_incb_temp.id",
-                      "(Intercept).series", "(Intercept):inverseK_incb_temp.series", "inverseK_incb_temp:inverseK_incb_temp.series",
-                      "e", "Rint", "Rslope", "Rshort", "Rlong")
-colnames(Table1) <- c("estimate", "lower", "upper")
-
-#Tabulating fixed efs and CIs
-Table1[1:4, 1] <- posterior.mode(model.2$Sol)
-Table1[1:4, 2:3] <- HPDinterval(model.2$Sol)
-
-#Tabulating ran efs and CIs
-Table1[5:11, 1] <- posterior.mode(model.2$VCV)[c(1,2,4,5,6,8,9)]
-Table1[5:11, 2:3] <- HPDinterval(model.2$VCV)[c(1,2,4,5,6,8,9),]
-
-#Tabulating repeatabilities and CIs
-#Rint
-Table1[12,1] <- Table1[5,1] / (Table1[5,1] + Table1[8,1]) #Rint
-Table1[12,2:3] <- Table1[5,2:3] / (Table1[5,2:3] + Table1[8,2:3]) #Rin CIs
-
-#Rslope
-Table1[13,1] <- Table1[6,1] / (Table1[6,1] + Table1[9,1]) #Rslope
-Table1[13,2:3] <- Table1[6,2:3] / (Table1[6,2:3] + Table1[9,2:3]) #Rslope CIs
-
-#Rshort
-Table1[14,1] <- (Table1[5,1] + Table1[8,1]) / (Table1[5,1] + Table1[8,1] + Table1[11,1]) #Rshort
-Table1[14,2:3] <- (Table1[5,2:3] + Table1[8,2:3]) / (Table1[5,2:3] + Table1[8,2:3] + Table1[11,2:3]) #Rshort CIs
-
-#Rlong
-Table1[15,1] <- Table1[5,1] / (Table1[5,1] + Table1[8,1] + Table1[11,1]) #Rlong
-Table1[15,2:3] <- Table1[5,2:3] / (Table1[5,2:3] + Table1[8,2:3] + Table1[11,2:3]) #Rlong CIs
-
-write.csv(Table1, "output/table/Table1.csv")
-
-#### Pooling three chains
-
-m1 <- mclapply(1:3, function(i) {
-  MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2,
-           random = ~us(1+inverseK_incb_temp):id + us(1+inverseK_incb_temp):series,
-           family = "gaussian",
-           prior = expanded.prior,
-           nitt = 75100,
-           burnin = 100,
-           thin = 50,
-           data = dat, 
-           verbose = F)
-}, mc.cores = 3)
 
 
-m1.1 <- lapply(m1, function(m) m$Sol)
-m1.2 <- do.call(mcmc.list, m1.1)
 
-gelman.plot(m1.2)
-gelman.diag(m1.2)
-summary(m1.2)
-posterior.mode(m1.2)
-HPDinterval(as.mcmc(rbind(m1.1[[1]], m1.1[[2]], m1.1[[3]])))
 
-m1.Sol <- lapply(m1, function(m) m$Sol)
-m1.Sol <- do.call(mcmc.list, m1.Sol)
 
-m1.VCV <- lapply(m1, function(m) m1.$VCV)
-m1.VCV <- do.call(mcmc.list, m1.VCV)
 
