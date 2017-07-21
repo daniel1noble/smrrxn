@@ -253,8 +253,6 @@ ggplot(g1.dat, aes(y = z.log.co2pm_pred,
       panel.grid.minor = element_blank(),
       axis.line = element_line(colour = "black"))
 
-expression(Metabolic~rate~~~~~~~~~~~~CO[2]^{-1})
-
 ggplot(g1.dat, aes(y = z.log.co2pm_pred, 
                    x = inverseK_incb_temp,
                    group = id, 
