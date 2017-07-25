@@ -333,3 +333,62 @@ ggplot(intslope.dat, aes(y = Intercept,
   theme_bw() +
   theme(legend.position = "none")
 
+#Calculating R^2c and R^2m and PCV
+#Full model
+summary(model.2.3)
+
+#Intercept model
+model.2.3.0 <- lmer(z.log.co2pmin ~ 1 + (1+inverseK_incb_temp|id) + (1+inverseK_incb_temp|series), data = data)
+summary(model.2.3.0)
+
+# Extraction of fitted value for the alternative model
+# fixef() extracts coefficents for fixed effects
+# mF@pp$X returns fixed effect design matrix
+
+Fixed <- fixef(model.2.3)[2] * model.2.3@pp$X[, 2] + fixef(model.2.3)[3] * model.2.3@pp$X[, 3] + fixef(model.2.3)[4] * model.2.3@pp$X[, 4]
+
+# Calculation of the variance in fitted values
+VarF <- var(Fixed)
+
+# An alternative way for getting the same result
+VarF <- var(as.vector(fixef(model.2.3) %*% t(model.2.3@pp$X)))
+
+# R2GLMM(m) - marginal R2GLMM i.e. just fixed effects 
+# Equ. 26, 29 and 30
+# VarCorr() extracts variance components
+# attr(VarCorr(lmer.model),'sc')^2 extracts the residual variance
+# marginal R2GLMM i.e. just fixed effects for RANDOM INTERCEPTS ONLY
+VarF/(VarF + VarCorr(model.2.3)$id[1,1]  + VarCorr(model.2.3)$series[1,1] + attr(VarCorr(model.2.3), "sc")^2)
+
+# marginal R2GLMM i.e. just fixed effects for RANDOM SLOPES
+VarF/(VarF  + VarCorr(model.2.3)$id[2,2]  + VarCorr(model.2.3)$series[2,2] + attr(VarCorr(model.2.3), "sc")^2)
+
+# marginal R2GLMM i.e. just fixed effects for RANDOM INTERCEPTS AND SLOPES
+VarF/(VarF + VarCorr(model.2.3)$id[1,1] + VarCorr(model.2.3)$id[2,2] + VarCorr(model.2.3)$series[1,1] + VarCorr(model.2.3)$series[2,2]+ attr(VarCorr(model.2.3), "sc")^2)
+
+
+# R2GLMM(c) - conditional R2GLMM for for RANDOM INTERCEPTS ONLY
+(VarF + VarCorr(model.2.3)$id[1,1]  + VarCorr(model.2.3)$series[1,1])/(VarF + VarCorr(model.2.3)$id[1,1]  + VarCorr(model.2.3)$series[1,1] + attr(VarCorr(model.2.3), "sc")^2)
+
+# R2GLMM(c) - conditional R2GLMM for for RANDOM SLOPES ONLY
+(VarF + VarCorr(model.2.3)$id[2,2]  + VarCorr(model.2.3)$series[2,2])/(VarF + VarCorr(model.2.3)$id[2,2]  + VarCorr(model.2.3)$series[2,2] + attr(VarCorr(model.2.3), "sc")^2)
+
+# R2GLMM(c) - conditional R2GLMM for for RANDOM INTERCEPTS AND SLOPES
+(VarF + VarCorr(model.2.3)$id[1,1]  + VarCorr(model.2.3)$series[1,1] + VarCorr(model.2.3)$id[2,2]  + VarCorr(model.2.3)$series[2,2])/(VarF + VarCorr(model.2.3)$id[1,1]  + VarCorr(model.2.3)$series[1,1] + VarCorr(model.2.3)$id[2,2]  + VarCorr(model.2.3)$series[2,2] + attr(VarCorr(model.2.3), "sc")^2)
+
+
+# PCVid0 - proportional change in variance at ID intercept level
+(1 - (VarCorr(model.2.3)$id[1,1] / VarCorr(model.2.3.0)$id[1,1])) * 100
+
+# PCVid1 - proportional change in variance at ID slope level
+(1 - (VarCorr(model.2.3)$id[2,2] / VarCorr(model.2.3.0)$id[2,2])) * 100
+
+# PCVcontainer - proportional change in variance at series intercept level
+(1 - (VarCorr(model.2.3)$series[1,1] / VarCorr(model.2.3.0)$series[1,1])) * 100
+
+# PCVcontainer - proportional change in variance at series slope level
+(1 - (VarCorr(model.2.3)$series[2,2] / VarCorr(model.2.3.0)$series[2,2])) * 100
+
+# PCVresid - proportional change in variance at units level
+# Equ. 33
+(1 - (attr(VarCorr(model.2.3), "sc")^2) / (attr(VarCorr(model.2.3.0), "sc")^2)) * 100
