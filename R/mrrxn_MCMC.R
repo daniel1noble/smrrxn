@@ -22,15 +22,17 @@ HPDinterval(as.mcmc(rbind(m1.Sol[[1]], m1.Sol[[2]], m1.Sol[[3]])))
 gelman.diag(m1.VCV, multivariate = F)
 summary(m1.VCV)
 posterior.mode(m1.VCV)
-HPDinterval(as.mcmc(rbind(m1.1[[1]], m1.1[[2]], m1.1[[3]])))
+HPDinterval(as.mcmc(rbind(m1.VCV[[1]], m1.VCV[[2]], m1.VCV[[3]])))
 
 #Tabulating the model output
 
 Table1 <- data.frame(matrix(nrow = 15 , ncol = 3))
-rownames(Table1) <- c("Interpcet", "inverseK_incb_temp", "z.log.mass", "inverseK_prior_temp2",
-                      "(Intercept).id", "(Intercept):inverseK_incb_temp.id", "inverseK_incb_temp:inverseK_incb_temp.id",
-                      "(Intercept).series", "(Intercept):inverseK_incb_temp.series", "inverseK_incb_temp:inverseK_incb_temp.series",
-                      "e", "Rint", "Rslope", "Rshort", "Rlong")
+#rownames(Table1) <- c("Interpcet", "inverseK_incb_temp", "z.log.mass", "inverseK_prior_temp2",
+#                      "IDintercept", "IDslope", "COV IDintercept-IDslope",
+#                      "Sintercept", "Sslope", "COV Sintercept-Sslope",
+#                      "e", "Rint", "Rslope", "Rshort", "Rlong")
+
+rownames(Table1) <- c(names(c(posterior.mode(m1.Sol), posterior.mode(m1.VCV)[c(1,4,2,5,8,6,9)])), "Rint", "Rslope", "Rshort", "Rlong")
 colnames(Table1) <- c("estimate", "lower", "upper")
 
 #Tabulating fixed efs and CIs
@@ -38,8 +40,8 @@ Table1[1:4, 1] <- posterior.mode(m1.Sol)
 Table1[1:4, 2:3] <- HPDinterval(as.mcmc(rbind(m1.Sol[[1]], m1.Sol[[2]], m1.Sol[[3]])))
 
 #Tabulating ran efs and CIs
-Table1[5:11, 1] <- posterior.mode(m1.VCV)[c(1,2,4,5,6,8,9)]
-Table1[5:11, 2:3] <- HPDinterval(as.mcmc(rbind(m1.VCV[[1]], m1.VCV[[2]], m1.VCV[[3]])))[c(1,2,4,5,6,8,9),]
+Table1[5:11, 1] <- posterior.mode(m1.VCV)[c(1,4,2,5,8,6,9)]
+Table1[5:11, 2:3] <- HPDinterval(as.mcmc(rbind(m1.VCV[[1]], m1.VCV[[2]], m1.VCV[[3]])))[c(1,4,2,5,8,6,9),]
 
 #Tabulating repeatabilities and CIs
 #Rint
@@ -63,10 +65,33 @@ write.csv(round(Table1,2), "output/table/Table1_rounded.csv")
 
 #trying to make predictions
 
-source("R/MCMCchains_function.R")
+#source("R/MCMCchains_function.R")
 
-m1 <- MCMC.chains("output/rds/m1")
-str(m1)
+#m2 <- MCMC.chains("output/rds/m2")
+
+m2 <- readRDS("output/rds/m2")
+
+m2.S <- lapply(m2, function(m) m$Sol)
+m2.Sol <- do.call(mcmc.list, m2.S)
+
+plot(m2.Sol)
+gelman.diag(m2.Sol)
+summary(m2.Sol)
+posterior.mode(m2.Sol)
+HPDinterval(as.mcmc(rbind(m2.Sol[[1]], m2.Sol[[2]], m2.Sol[[3]])))
+
+m2.V <- lapply(m2, function(m) m$VCV)
+m2.VCV <- do.call(mcmc.list, m2.V)
+
+plot(m2.VCV)
+gelman.diag(m2.VCV, multivariate = F)
+summary(m2.VCV)
+posterior.mode(m2.VCV)
+HPDinterval(as.mcmc(rbind(m2.VCV[[1]], m2.VCV[[2]], m2.VCV[[3]])))
+
+
+str(m2)
+str(m2$solVCVlist)
 names(data) 
 
 newdata = data.frame(inverseK_incb_temp = rep(c(-0.6547592,  0.6333022, -0.1292009,  0.1283428, -0.3902114,  0.3824882),42*10),
