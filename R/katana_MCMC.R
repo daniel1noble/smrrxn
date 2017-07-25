@@ -33,17 +33,16 @@ expanded.prior <- list(R = list(V = 1, nu = 0.002),
 
 
 #model
-m2 <- mclapply(1:3, function(i) {
-  MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2,
+m3 <- mclapply(1:3, function(i) {
+  MCMCglmm(z.log.co2pmin ~ 1,
            random = ~us(1+inverseK_incb_temp):id + us(1+inverseK_incb_temp):series,
            family = "gaussian",
            prior = expanded.prior,
            nitt = 7510000,
            burnin = 10000,
            thin = 5000,
-           pr = T,
            data = dat, 
            verbose = T)
 }, mc.cores = 3)
 
-saveRDS(m2, "R/m2")
+saveRDS(m2, "R/m3")
