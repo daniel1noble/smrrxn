@@ -5,6 +5,23 @@ rm(list = ls())
 
 #load library
 library(MCMCglmm)
+library(parallel)
+
+#data
+
+data <- read.csv("data/data_final/mrrxn_final_v2.csv")
+data$id <- as.factor(data$id)
+data$series <- as.factor(data$series)
+
+varibs.need <- c("obs", "samp_period", "id" ,"batch", "series", "incb_num", "incb_temp_id", "defecate", "incb_temp", "z.incb_temp", "z.log.temp", "incb_temp_K", "inverseK_incb_temp", "body_temp", "z.body_temp", "z.log.body_temp", "body_temp_K", "inverseK_body_temp" , "z.prior_temp1", "z.log.prior_temp1", "prior_temp1_K", "inverseK_prior_temp1", "prior_temp2_K", "inverseK_prior_temp2", "z.prior_temp2", "z.log.prior_temp2", "orig_lizmass", "lizmass_nocombout", "log.mass", "z.log.mass","orig_co2_pmin", "co2pm_nocombout", "log.co2pmin", "z.log.co2pmin")
+
+incl.vars <- names(data) %in% varibs.need
+data <- data[incl.vars]
+
+predictors <- c("z.log.co2pmin", "inverseK_incb_temp", "z.log.mass", "inverseK_prior_temp2", "id", "series")
+
+dat <- data[complete.cases(data[,predictors]),]
+str(dat)
 
 # Define whether to run code
 
@@ -34,23 +51,74 @@ if(m1){
 m1 <- readRDS("output/rds/m1")
 }
 
+#Calculating repeatabilities using m1
 m1.S <- lapply(m1, function(m) m$Sol)
 m1.Sol <- do.call(rbind, m1.S)
+m1.S1 <- do.call(mcmc.list, m1.S)
 
 m1.V <- lapply(m1, function(m) m$VCV)
 m1.VCV <- do.call(rbind, m1.V)
+m1.V1 <- do.call(mcmc.list, m1.V)
 
-gelman.diag(m1.Sol)
+gelman.diag(m1.S1)
 summary(m1.Sol)
 posterior.mode(m1.Sol)
-HPDinterval(as.mcmc(rbind(m1.Sol[[1]], m1.Sol[[2]], m1.Sol[[3]])))
+HPDinterval(as.mcmc(m1.Sol))
 
-gelman.diag(m1.VCV, multivariate = F)
+gelman.diag(m1.V1, multivariate = F)
 summary(m1.VCV)
 posterior.mode(m1.VCV)
-HPDinterval(as.mcmc(rbind(m1.VCV[[1]], m1.VCV[[2]], m1.VCV[[3]])))
+HPDinterval(as.mcmc(m1.VCV))
 
-#Calculating repeatabilities using m2
+#Tabulating the model output using m1
+Table1 <- data.frame(matrix(nrow = 15 , ncol = 3))
+#rownames(Table1) <- c("Interpcet", "inverseK_incb_temp", "z.log.mass", "inverseK_prior_temp2",
+#                      "IDintercept", "IDslope", "COV IDintercept-IDslope",
+#                      "Sintercept", "Sslope", "COV Sintercept-Sslope",
+#                      "e", "Rint", "Rslope", "Rshort", "Rlong")
+
+rownames(Table1) <- c(names(c(posterior.mode(m1.Sol), posterior.mode(m1.VCV)[c(1,4,2,5,8,6,9)])), "Rint", "Rslope", "Rshort", "Rlong")
+colnames(Table1) <- c("estimate", "lower", "upper")
+
+#Tabulating fixed efs and CIs
+Table1[1:4, 1] <- posterior.mode(m1.Sol)
+Table1[1:4, 2:3] <- HPDinterval(as.mcmc(m1.Sol))
+
+#Tabulating ran efs and CIs
+Table1[5:11, 1] <- posterior.mode(m1.VCV)[c(1,4,2,5,8,6,9)]
+Table1[5:11, 2:3] <- HPDinterval(as.mcmc(m1.VCV))[c(1,4,2,5,8,6,9),]
+
+#Tabulating repeatabilities and CIs
+head(m1.VCV)
+colnames(m1.VCV)
+
+#Rint
+R.int <- m1.VCV[,"(Intercept):(Intercept).id"] / ( m1.VCV[,"(Intercept):(Intercept).id"] + m1.VCV[,"(Intercept):(Intercept).series"] ) 
+
+Table1[12,1] <- posterior.mode(R.int) #R.int
+Table1[12,2:3] <- HPDinterval(as.mcmc(R.int)) #R.int CIs
+
+#Rslope
+R.slope <- m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"] / ( m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"] + m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.series"] )
+
+Table1[13,1] <-  posterior.mode(R.slope) #Rslope
+Table1[13,2:3] <- HPDinterval(as.mcmc(R.slope)) #Rslope CIs
+
+#Rshort
+R.short <- ( m1.VCV[,"(Intercept):(Intercept).id"] + m1.VCV[,"(Intercept):(Intercept).series"] ) / ( m1.VCV[,"(Intercept):(Intercept).id"] + m1.VCV[,"(Intercept):(Intercept).series"]  + m1.VCV[,"units"] )
+
+Table1[14,1] <- posterior.mode(R.short) #R.short
+Table1[14,2:3] <- HPDinterval(as.mcmc(R.short)) #R.short CIs
+
+#Rlong
+R.long <-  m1.VCV[,"(Intercept):(Intercept).id"] / ( m1.VCV[,"(Intercept):(Intercept).id"] + m1.VCV[,"(Intercept):(Intercept).series"]  + m1.VCV[,"units"] )
+
+Table1[15,1] <-  posterior.mode(R.long) #Rlong
+Table1[15,2:3] <- HPDinterval(as.mcmc(R.long)) #Rlong CIs
+
+write.csv(Table1, "output/table/Table1.csv")
+write.csv(round(Table1,2), "output/table/Table1_rounded.csv")
+
 #m2
 if(m2){
   m2 <- mclapply(1:3, function(i) {
@@ -69,45 +137,24 @@ if(m2){
 }
 
 m2.S <- lapply(m2, function(m) m$Sol)
-m2.S1 <- do.call(rbind, m2.S)
+m2.Sol <- do.call(rbind, m2.S)
+m2.S1 <- do.call(mcmc.list, m2.S)
 
-#Tabulating the model output using m2
-Table1 <- data.frame(matrix(nrow = 15 , ncol = 3))
-#rownames(Table1) <- c("Interpcet", "inverseK_incb_temp", "z.log.mass", "inverseK_prior_temp2",
-#                      "IDintercept", "IDslope", "COV IDintercept-IDslope",
-#                      "Sintercept", "Sslope", "COV Sintercept-Sslope",
-#                      "e", "Rint", "Rslope", "Rshort", "Rlong")
+gelman.diag(m2.S1, multivariate = F)
+summary(m2.Sol)
+posterior.mode(m2.Sol)
+HPDinterval(as.mcmc(m2.Sol))
 
-rownames(Table1) <- c(names(c(posterior.mode(m2.Sol), posterior.mode(m2.VCV)[c(1,4,2,5,8,6,9)])), "Rint", "Rslope", "Rshort", "Rlong")
-colnames(Table1) <- c("estimate", "lower", "upper")
+m2.V <- lapply(m2, function(m) m$VCV)
+m2.V1 <- do.call(mcmc.list, m2.V)
+m2.VCV <- do.call(rbind, m2.V)
 
-#Tabulating fixed efs and CIs
-Table1[1:4, 1] <- posterior.mode(m2.Sol)
-Table1[1:4, 2:3] <- HPDinterval(as.mcmc(rbind(m2.Sol[[1]], m2.Sol[[2]], m2.Sol[[3]])))
+plot(m2.VCV)
+gelman.diag(m2.VCV, multivariate = F)
+summary(m2.VCV)
+posterior.mode(m2.VCV)
+HPDinterval(as.mcmc(rbind(m2.VCV[[1]], m2.VCV[[2]], m2.VCV[[3]])))
 
-#Tabulating ran efs and CIs
-Table1[5:11, 1] <- posterior.mode(m2.VCV)[c(1,4,2,5,8,6,9)]
-Table1[5:11, 2:3] <- HPDinterval(as.mcmc(rbind(m2.VCV[[1]], m2.VCV[[2]], m2.VCV[[3]])))[c(1,4,2,5,8,6,9),]
-
-#Tabulating repeatabilities and CIs
-#Rint
-Table1[12,1] <- Table1[5,1] / (Table1[5,1] + Table1[8,1]) #Rint
-Table1[12,2:3] <- Table1[5,2:3] / (Table1[5,2:3] + Table1[8,2:3]) #Rin CIs
-
-#Rslope
-Table1[13,1] <- Table1[6,1] / (Table1[6,1] + Table1[9,1]) #Rslope
-Table1[13,2:3] <- Table1[6,2:3] / (Table1[6,2:3] + Table1[9,2:3]) #Rslope CIs
-
-#Rshort
-Table1[14,1] <- (Table1[5,1] + Table1[8,1]) / (Table1[5,1] + Table1[8,1] + Table1[11,1]) #Rshort
-Table1[14,2:3] <- (Table1[5,2:3] + Table1[8,2:3]) / (Table1[5,2:3] + Table1[8,2:3] + Table1[11,2:3]) #Rshort CIs
-
-#Rlong
-Table1[15,1] <- Table1[5,1] / (Table1[5,1] + Table1[8,1] + Table1[11,1]) #Rlong
-Table1[15,2:3] <- Table1[5,2:3] / (Table1[5,2:3] + Table1[8,2:3] + Table1[11,2:3]) #Rlong CIs
-
-write.csv(Table1, "output/table/Table1.csv")
-write.csv(round(Table1,2), "output/table/Table1_rounded.csv")
 
 #Individual predictions from m2 for plots
 
@@ -119,23 +166,6 @@ extractID <- function(post, fixef = colnames(post)[1:4], id = "ld0133"){
     return(solID)
 }
 test <- extractID(m2.S1)
-
-m2.Sol <- do.call(mcmc.list, m2.S)
-
-plot(m2.Sol)
-gelman.diag(m2.Sol)
-summary(m2.Sol)
-posterior.mode(m2.Sol)
-HPDinterval(as.mcmc(rbind(m2.Sol[[1]], m2.Sol[[2]], m2.Sol[[3]])))
-
-m2.V <- lapply(m2, function(m) m$VCV)
-m2.VCV <- do.call(mcmc.list, m2.V)
-
-plot(m2.VCV)
-gelman.diag(m2.VCV, multivariate = F)
-summary(m2.VCV)
-posterior.mode(m2.VCV)
-HPDinterval(as.mcmc(rbind(m2.VCV[[1]], m2.VCV[[2]], m2.VCV[[3]])))
 
 #Intercept model for calculating PCV 
 #m3
