@@ -37,7 +37,7 @@ expanded.prior <- list(R = list(V = 1, nu = 0.002),
 #m1
 if(m1){
   m1 <- mclapply(1:3, function(i) {
-    MCMCglmm(z.log.co2pmin ~ z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2,
+    MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2,
              random = ~us(1+inverseK_incb_temp):id + us(1+inverseK_incb_temp):series,
              family = "gaussian",
              prior = expanded.prior,
@@ -122,13 +122,14 @@ write.csv(round(Table1,2), "output/table/Table1_rounded.csv")
 #m2
 if(m2){
   m2 <- mclapply(1:3, function(i) {
-    MCMCglmm(z.log.co2pmin ~ z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2,
+    MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2,
              random = ~us(1+inverseK_incb_temp):id + us(1+inverseK_incb_temp):series,
              family = "gaussian",
              prior = expanded.prior,
              nitt = 7510000,
              burnin = 10000,
              thin = 5000,
+             pr = TRUE,
              data = dat, 
              verbose = T)
   }, mc.cores = 3)
@@ -153,19 +154,137 @@ plot(m2.VCV)
 gelman.diag(m2.VCV, multivariate = F)
 summary(m2.VCV)
 posterior.mode(m2.VCV)
-HPDinterval(as.mcmc(rbind(m2.VCV[[1]], m2.VCV[[2]], m2.VCV[[3]])))
-
+HPDinterval(as.mcmc(m2.VCV))
 
 #Individual predictions from m2 for plots
-
-post <- m2.S1
-
-extractID <- function(post, fixef = colnames(post)[1:4], id = "ld0133"){
-    columns <- as.character(c(fixef, colnames(post)[grep(id, colnames(post))]))  
-    solID <- post[,columns]
-    return(solID)
+get.predictions <- function(id = "ld0133", post, sampling.period=1){
+  
+  # Check that this combo is in the dataset
+  focal.series <- paste(id, sampling.period, sep = "_")
+  if(!(focal.series %in% dat$series)) return(NULL)
+  print(focal.series)
+  
+  #setting up lizard and sampling period variables use for calculating predictions
+  lizard.id <- paste("(Intercept).id.", id, sep = "")
+  
+  sampling.id <- paste("(Intercept).series.", id, "_", sampling.period, sep = "") # one can pick the sampling period, e.g. 1, or 2...10
+  
+  lizard.slope <- paste("inverseK_incb_temp.id.", id, sep = "")
+  sampling.slope <- paste("inverseK_incb_temp.series.", id, "_", sampling.period, sep = "")
+  
+  post <- post %>% as.data.frame()
+  
+  #calculating predictions for my measured temperatures
+  out <- do.call("cbind", lapply(1:length(incubation.temperatures), function(i){
+    focal.answer <- post[, names(post) == "(Intercept)"] +            # global intercept
+      post[, names(post) == lizard.id] + post[, names(post) == sampling.id] + # lizard- and sampling period-specific random intercepts
+      (incubation.temperatures[i] * (post$inverseK_incb_temp + post[, names(post) == lizard.slope] + post[, names(post) == sampling.slope])) + # temp * (global.slope +  slope for THIS lizard in THIS sampling period)
+      (post$inverseK_prior_temp2 * mean.prior.temp) # fixed effect of prior temp, assuming mean value of prior temp
+    # we leave out mass, since average is zero, so we are calcualting this for an average mass liard
+  }))
+  
+  #compiling predictions into data frame
+  data.frame(predicted = c(out),
+             Temperature = rep(incubation.temperatures, each = nrow(out)),
+             Lizard = id, 
+             stringsAsFactors = FALSE)
 }
-test <- extractID(m2.S1)
+
+# We will calculate the reaction norms assuming that all lizards had the mean value for 'prior temp'
+mean.prior.temp <- mean(dat$inverseK_prior_temp2, na.rm = T)
+
+# Here are the six incubator temperatures, 
+incubation.temperatures <- unique(dat$inverseK_incb_temp)
+
+#and the 42 lizard names
+lizard.names <- data$id %>% as.character %>% unique %>% sort
+
+output <- do.call("rbind", lapply(1:10, function(i){
+  do.call("rbind", lapply(lizard.names, get.predictions, post=cbind(m2.Sol, m2.VCV), sampling.period = i)) %>% mutate(sampling.period = i) %>% arrange(Temperature, predicted) %>% mutate(Lizard = factor(Lizard, levels = unique(Lizard))) 
+}))
+
+reaction.norms <- output %>% group_by(Temperature, Lizard, sampling.period) %>% summarise(posterior.mode = posterior.mode(as.mcmc(predicted)), lowerCI = as.numeric(HPDinterval(as.mcmc(predicted)))[1], upperCI = as.numeric(HPDinterval(as.mcmc(predicted)))[2])
+
+str(reaction.norms)
+
+#Plotting reactions
+#reaction.norms %>% ggplot(aes(Lizard, posterior.mode)) + geom_hline(yintercept = 0, linetype = 2) + geom_errorbar(aes(ymin = lowerCI, ymax = upperCI), width = 0) + geom_point() + coord_flip() + facet_wrap(~Temperature) + ylab("Respiration rate")
+
+#pdf("output/fig/reaction.norms.pdf", 10, 6)
+reaction.norms %>% ggplot(aes(x = Temperature, y = posterior.mode, group = Lizard, color = Lizard)) + geom_line() + geom_point(shape = 1, fill = "white", size = 1, color = "black") + facet_wrap(~ sampling.period, nrow = 2) + theme_bw() + theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Temperature (1/K)", y = expression(Metabolic~rate~(CO[2]~min^{-1})))
+#dev.off()
+
+pdf("output/fig/ID.rxn.norm.pdf", 9,9)
+reaction.norms %>% ggplot(aes(x = Temperature, y = posterior.mode, group = sampling.period, color = sampling.period)) + geom_line() + geom_point(shape = 1, fill = "white", size = 1, color = "black") + facet_wrap(~ Lizard) + theme_bw() + theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Temperature (1/K)", y = expression(Metabolic~rate~(CO[2]~min^{-1})))
+dev.off()
+
+#Plotting covariances
+#Individual predictions from m2 for plots
+get.intercept.slope <- function(id = "ld0133", post, sampling.period=1){
+  
+  # Check that this combo is in the dataset
+  focal.series <- paste(id, sampling.period, sep = "_")
+  if(!(focal.series %in% dat$series)) return(NULL)
+  print(focal.series)
+  
+  #setting up lizard and sampling period variables use for calculating predictions
+  lizard.id <- paste("(Intercept).id.", id, sep = "")
+  
+  sampling.id <- paste("(Intercept).series.", id, "_", sampling.period, sep = "") # one can pick the sampling period, e.g. 1, or 2...10
+  
+  lizard.slope <- paste("inverseK_incb_temp.id.", id, sep = "")
+  sampling.slope <- paste("inverseK_incb_temp.series.", id, "_", sampling.period, sep = "")
+  
+  post <- post %>% as.data.frame()
+  
+  #compiling into data frame
+  out <- data.frame(Lizard = id,
+                    global.int = post[, names(post) == "(Intercept)"], # global intercept
+                    ind.int = post[, names(post) == lizard.id], #lizard- random intercepts
+                    series.int = post[, names(post) == sampling.id], # sampling period-specific random intercepts
+                    ind.slope = post[, names(post) == lizard.slope],
+                    series.slope = post[, names(post) == sampling.slope],
+                    stringsAsFactors = FALSE)
+}
+
+
+#and the 42 lizard names
+lizard.names <- data$id %>% as.character %>% unique %>% sort
+
+output <- do.call("rbind", lapply(1:10, function(i){
+  do.call("rbind", lapply(lizard.names, get.intercept.slope, post=cbind(m2.Sol, m2.VCV), sampling.period = i)) %>% mutate(sampling.period = i) %>% arrange(sampling.period) %>% mutate(Lizard = factor(Lizard, levels = unique(Lizard))) 
+}))
+
+cor.int.slop <- output %>% group_by(Lizard, sampling.period) %>% summarise(global.int = posterior.mode(as.mcmc(global.int)),
+                                                                           Ind.int = posterior.mode(as.mcmc(ind.int)),
+                                                                           Series.int = posterior.mode(as.mcmc(series.int)),
+                                                                           Ind.slope = posterior.mode(as.mcmc(ind.slope)),
+                                                                           Series.slope = posterior.mode(as.mcmc(series.slope)),
+                                                                           lower.Ind.int = as.numeric(HPDinterval(as.mcmc(ind.int))[,1]),
+                                                                           upper.Ind.int = as.numeric(HPDinterval(as.mcmc(ind.int))[,2]),
+                                                                           lower.Series.int = HPDinterval(as.mcmc(series.int))[,1],
+                                                                           upper.Series.int = HPDinterval(as.mcmc(series.int))[,2],
+                                                                           lower.Ind.slope = HPDinterval(as.mcmc(ind.slope))[,1],
+                                                                           upper.Ind.slope = HPDinterval(as.mcmc(ind.slope))[,2],
+                                                                           lower.Series.slope = HPDinterval(as.mcmc(series.slope))[,1],
+                                                                           upper.Series.slope = HPDinterval(as.mcmc(series.slope))[,2])
+
+
+#Plotting ints with slopes
+
+#pdf("output/fig/covariance.ID.int.slope.pdf", 10, 6)
+cor.int.slop %>% ggplot(aes(y = Ind.int, x = Ind.slope)) + geom_errorbar(aes(x = Ind.slope, ymin = lower.Ind.int, ymax = upper.Ind.int), color = "#999999", width = 0, size = 0.25)+ geom_errorbarh(aes(x = Ind.slope, xmin = lower.Ind.slope, xmax = upper.Ind.slope), color = "#999999", size = 0.25) + geom_point(shape = 1, fill = "white", size = 1, color = "black")  + facet_wrap(~ sampling.period, nrow = 2) + theme_bw() + theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Slope for ID", y = "Intercept for ID")
+#dev.off()
+
+#pdf("output/fig/covariance.series.int.slope.pdf", 10, 6)
+cor.int.slop %>% ggplot(aes(y = Series.int, x = Series.slope)) + geom_errorbar(aes(x = Series.slope, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.25, color = "#999999")+ geom_errorbarh(aes(x = Series.slope, xmin = lower.Series.slope, xmax = upper.Series.slope), size = 0.1, color = "#999999") + geom_point(shape = 1, fill = "white", size = 0.25, color = "black")  + facet_wrap(~ sampling.period, nrow = 2) +  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Slope for Series", y = "Intercept for Series") 
+#dev.off()
+
+#pdf("output/fig/covariance.series.int.slope.samp.period.pdf", 10, 10)
+cor.int.slop %>% ggplot(aes(y = Series.int, x = Series.slope, color = sampling.period)) + geom_errorbar(aes(x = Series.slope, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.8)+ geom_errorbarh(aes(x = Series.slope, xmin = lower.Series.slope, xmax = upper.Series.slope), size = 0.8) + geom_point(shape = 1, fill = "white", size = 1, color = "black")  + facet_wrap(~ Lizard) +  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Slope for Series", y = "Intercept for Series") 
+#dev.off()
+
+
 
 #Intercept model for calculating PCV 
 #m3
