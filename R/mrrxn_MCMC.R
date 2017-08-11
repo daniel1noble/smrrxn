@@ -273,11 +273,52 @@ cor.int.slop <- output %>% group_by(Lizard, sampling.period) %>% summarise(globa
 #Plotting ints with slopes
 
 #pdf("output/fig/covariance.ID.int.slope.pdf", 10, 6)
-cor.int.slop %>% ggplot(aes(y = Ind.int, x = Ind.slope)) + geom_errorbar(aes(x = Ind.slope, ymin = lower.Ind.int, ymax = upper.Ind.int), color = "#999999", width = 0, size = 0.25)+ geom_errorbarh(aes(x = Ind.slope, xmin = lower.Ind.slope, xmax = upper.Ind.slope), color = "#999999", size = 0.25) + geom_point(shape = 1, fill = "white", size = 1, color = "black")  + facet_wrap(~ sampling.period, nrow = 2) + theme_bw() + theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Slope for ID", y = "Intercept for ID")
+fig2a <- cor.int.slop %>% ggplot(aes(y = Ind.int, x = Ind.slope)) + geom_errorbar(aes(x = Ind.slope, ymin = lower.Ind.int, ymax = upper.Ind.int), color = "#999999", width = 0, size = 0.25)+ geom_errorbarh(aes(x = Ind.slope, xmin = lower.Ind.slope, xmax = upper.Ind.slope), color = "#999999", size = 0.25) + geom_point(shape = 1, fill = "white", size = 1, color = "black")  + facet_wrap(~ sampling.period, nrow = 2) + theme_bw() + theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Slope for ID", y = "Intercept for ID") 
 #dev.off()
 
 #pdf("output/fig/covariance.series.int.slope.pdf", 10, 6)
-cor.int.slop %>% ggplot(aes(y = Series.int, x = Series.slope)) + geom_errorbar(aes(x = Series.slope, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.25, color = "#999999")+ geom_errorbarh(aes(x = Series.slope, xmin = lower.Series.slope, xmax = upper.Series.slope), size = 0.1, color = "#999999") + geom_point(shape = 1, fill = "white", size = 0.25, color = "black")  + facet_wrap(~ sampling.period, nrow = 2) +  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Slope for Series", y = "Intercept for Series") 
+fig2b <- cor.int.slop %>% ggplot(aes(y = Series.int, x = Series.slope)) + geom_errorbar(aes(x = Series.slope, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.25, color = "#999999")+ geom_errorbarh(aes(x = Series.slope, xmin = lower.Series.slope, xmax = upper.Series.slope), size = 0.1, color = "#999999") + geom_point(shape = 1, fill = "white", size = 0.25, color = "black")  + facet_wrap(~ sampling.period, nrow = 2) +  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Slope for Series", y = "Intercept for Series") 
+#dev.off()
+
+
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  
+  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  
+  if (numPlots==1) {
+    print(plots[[1]])
+    
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+#pdf("output/fig/covariance.ID.Series.pdf", 10, 10)
+multiplot(fig2a, fig2b)
 #dev.off()
 
 #pdf("output/fig/covariance.series.int.slope.samp.period.pdf", 10, 10)

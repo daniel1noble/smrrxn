@@ -392,3 +392,5 @@ VarF/(VarF + VarCorr(model.2.3)$id[1,1] + VarCorr(model.2.3)$id[2,2] + VarCorr(m
 # PCVresid - proportional change in variance at units level
 # Equ. 33
 (1 - (attr(VarCorr(model.2.3), "sc")^2) / (attr(VarCorr(model.2.3.0), "sc")^2)) * 100
+
+
