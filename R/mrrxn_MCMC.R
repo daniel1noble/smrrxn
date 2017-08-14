@@ -41,7 +41,7 @@ if(m1){
              random = ~us(1+inverseK_incb_temp):id + us(1+inverseK_incb_temp):series,
              family = "gaussian",
              prior = expanded.prior,
-             nitt = 5010000,
+             nitt = 7510000,
              burnin = 10000,
              thin = 5000,
              data = dat, 
@@ -214,9 +214,9 @@ str(reaction.norms)
 reaction.norms %>% ggplot(aes(x = Temperature, y = posterior.mode, group = Lizard, color = Lizard)) + geom_line() + geom_point(shape = 1, fill = "white", size = 1, color = "black") + facet_wrap(~ sampling.period, nrow = 2) + theme_bw() + theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Temperature (1/K)", y = expression(Metabolic~rate~(CO[2]~min^{-1})))
 #dev.off()
 
-pdf("output/fig/ID.rxn.norm.pdf", 9,9)
+#pdf("output/fig/ID.rxn.norm.pdf", 9,9)
 reaction.norms %>% ggplot(aes(x = Temperature, y = posterior.mode, group = sampling.period, color = sampling.period)) + geom_line() + geom_point(shape = 1, fill = "white", size = 1, color = "black") + facet_wrap(~ Lizard) + theme_bw() + theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Temperature (1/K)", y = expression(Metabolic~rate~(CO[2]~min^{-1})))
-dev.off()
+#dev.off()
 
 #Plotting covariances
 #Individual predictions from m2 for plots
@@ -249,7 +249,7 @@ get.intercept.slope <- function(id = "ld0133", post, sampling.period=1){
 
 
 #and the 42 lizard names
-lizard.names <- data$id %>% as.character %>% unique %>% sort
+lizard.names <- dat$id %>% as.character %>% unique %>% sort
 
 output <- do.call("rbind", lapply(1:10, function(i){
   do.call("rbind", lapply(lizard.names, get.intercept.slope, post=cbind(m2.Sol, m2.VCV), sampling.period = i)) %>% mutate(sampling.period = i) %>% arrange(sampling.period) %>% mutate(Lizard = factor(Lizard, levels = unique(Lizard))) 
