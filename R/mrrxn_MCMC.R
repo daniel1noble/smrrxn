@@ -104,13 +104,13 @@ R.slope <- m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"] / ( m1.VCV[,"inve
 Table1[13,1] <-  posterior.mode(R.slope) #Rslope
 Table1[13,2:3] <- HPDinterval(as.mcmc(R.slope)) #Rslope CIs
 
-#Rshort
+#Rshort in intercept
 R.short <- ( m1.VCV[,"(Intercept):(Intercept).id"] + m1.VCV[,"(Intercept):(Intercept).series"] ) / ( m1.VCV[,"(Intercept):(Intercept).id"] + m1.VCV[,"(Intercept):(Intercept).series"]  + m1.VCV[,"units"] )
 
 Table1[14,1] <- posterior.mode(R.short) #R.short
 Table1[14,2:3] <- HPDinterval(as.mcmc(R.short)) #R.short CIs
 
-#Rlong
+#Rlong in intercept
 R.long <-  m1.VCV[,"(Intercept):(Intercept).id"] / ( m1.VCV[,"(Intercept):(Intercept).id"] + m1.VCV[,"(Intercept):(Intercept).series"]  + m1.VCV[,"units"] )
 
 Table1[15,1] <-  posterior.mode(R.long) #Rlong
@@ -118,6 +118,35 @@ Table1[15,2:3] <- HPDinterval(as.mcmc(R.long)) #Rlong CIs
 
 write.csv(Table1, "output/table/Table1.csv")
 write.csv(round(Table1,2), "output/table/Table1_rounded.csv")
+
+#Rlong in slope?
+R.long.slope <-  m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"] / ( m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"] + m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.series"]  + m1.VCV[,"units"] )
+
+posterior.mode(R.long.slope)
+HPDinterval(as.mcmc(R.long.slope))
+
+#Rshort in slope?
+R.short.slope <- ( m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"] + m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.series"] ) / ( m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"] + m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.series"]  + m1.VCV[,"units"] )
+
+posterior.mode(R.short.slope)
+HPDinterval(as.mcmc(R.short.slope))
+
+
+#Calculating correlation of ID:slope and series:slope
+id.slope.cor <- m1.VCV[,"inverseK_incb_temp:(Intercept).id"] / ( sd(m1.VCV[,"(Intercept):(Intercept).id"]) * sd(m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"]) )
+hist(id.slope.cor)
+posterior.mode(id.slope.cor)
+HPDinterval(as.mcmc(id.slope.cor))
+
+series.slope.cor <- m1.VCV[,"inverseK_incb_temp:(Intercept).series"] / ( sd(m1.VCV[,"(Intercept):(Intercept).series"]) * sd(m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.series"]) )
+hist(series.slope.cor)
+posterior.mode(series.slope.cor)
+HPDinterval(as.mcmc(series.slope.cor))
+
+
+
+
+
 
 #m2
 if(m2){
@@ -324,6 +353,8 @@ multiplot(fig2a, fig2b)
 #pdf("output/fig/covariance.series.int.slope.samp.period.pdf", 10, 10)
 cor.int.slop %>% ggplot(aes(y = Series.int, x = Series.slope, color = sampling.period)) + geom_errorbar(aes(x = Series.slope, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.8)+ geom_errorbarh(aes(x = Series.slope, xmin = lower.Series.slope, xmax = upper.Series.slope), size = 0.8) + geom_point(shape = 1, fill = "white", size = 1, color = "black")  + facet_wrap(~ Lizard) +  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Slope for Series", y = "Intercept for Series") 
 #dev.off()
+
+
 
 
 
