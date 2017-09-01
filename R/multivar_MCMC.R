@@ -44,7 +44,7 @@ multi.prior <- list(R = list(V = diag(6), nu = 0.01), G = list(G1 = list(V = dia
              nitt = 7510000,
              burnin = 10000,
              thin = 5000,
-             data = data4, 
+             data = data, 
              verbose = T)
   }, mc.cores = 3)
   
