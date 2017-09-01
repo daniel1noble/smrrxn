@@ -6,7 +6,6 @@ rm(list = ls())
 #load library
 library(MCMCglmm)
 library(parallel)
-library(tidyr)
 library(dplyr)
 
 #data
