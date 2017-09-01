@@ -48,7 +48,7 @@ multi.prior <- list(R = list(V = diag(6), nu = 0.01), G = list(G1 = list(V = dia
              verbose = T)
   }, mc.cores = 3)
   
- saveRDS(m4, "output/rds/m4")
+ saveRDS(m4, "R/m4")
 
 
 
