@@ -36,7 +36,7 @@ multi.prior <- list(R = list(V = diag(6), nu = 0.01), G = list(G1 = list(V = dia
 
 #m4
  m4 <- mclapply(1:3, function(i) {
-  m4 <- MCMCglmm(cbind(t_22, t_24, t_26, t_28, t_30, t_32) ~  z.log.mass,
+  MCMCglmm(cbind(t_22, t_24, t_26, t_28, t_30, t_32) ~  z.log.mass,
              random= ~us(trait):id,
              rcov = ~us(trait):units,
              family = c(rep("gaussian", 6)),
