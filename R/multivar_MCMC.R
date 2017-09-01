@@ -1,4 +1,4 @@
-setwd("~/Dropbox/smrrxn/")
+setwd("~/gitrepo/smrrxn/")
 
 #clear envir
 rm(list = ls())
