@@ -1,0 +1,81 @@
+#Script for create 6 different datasets for releveling the intercept at 6 different temps
+
+setwd("~/Dropbox/smrrxn/")
+
+#clear envir
+rm(list = ls())
+
+#libraries
+library(dplyr)
+
+#read in data
+data <- read.csv("data/data_final/mrrxn_final_v2.csv")
+data$id <- as.factor(data$id)
+data$series <- as.factor(data$series)
+
+varibs.need <- c("obs", "samp_period", "id" ,"batch", "series", "incb_num", "incb_temp_id", "defecate", "incb_temp", "z.incb_temp", "z.log.temp", "incb_temp_K", "inverseK_incb_temp", "body_temp", "z.body_temp", "z.log.body_temp", "body_temp_K", "inverseK_body_temp" , "z.prior_temp1", "z.log.prior_temp1", "prior_temp1_K", "inverseK_prior_temp1", "prior_temp2_K", "inverseK_prior_temp2", "z.prior_temp2", "z.log.prior_temp2", "orig_lizmass", "lizmass_nocombout", "log.mass", "z.log.mass","orig_co2_pmin", "co2pm_nocombout", "log.co2pmin", "z.log.co2pmin")
+
+incl.vars <- names(data) %in% varibs.need
+data <- data[incl.vars]
+
+str(data)
+
+#Plotting these temp relationships out
+unique(data$incb_temp)
+unique(data$inverseK_incb_temp)
+
+par(mfrow = c(1,2))
+
+mod.inK <- lm(z.log.co2pmin ~ inverseK_incb_temp, data = data)
+mod.C <- lm(z.log.co2pmin ~ incb_temp, data = data)
+
+plot(data$incb_temp, data$z.log.co2pmin)
+abline(mod.C)
+plot(data$inverseK_incb_temp, data$z.log.co2pmin)
+abline(mod.inK)
+
+
+#lme4 model to test recentering of data
+model.1 <- lmer(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + (1+inverseK_incb_temp|id) + (1+inverseK_incb_temp|series), data = data)
+summary(model.1)
+
+#Back calculation from inverse K to C
+
+#incb_temp
+#data$incb_temp_K <- data$incb_temp + 273.15
+#data$inverseK_incb_temp <- 1 / 8.62e-5 * ((1 / mean(data$incb_temp_K)) - (1 /data$incb_temp_K))
+#x = -0.6547592
+#y = 22
+#x = (1 / 8.62e-5) * ((1 / 300.15) - (1 / (y + 273.15)))
+#(x / (1 / 8.62e-5)) = ((1 / 300.15) - (1 / (y + 273.15)))
+#(x / (1 / 8.62e-5)) - (1 / 300.15) = -(1 / (y + 273.15))
+#((x / (1 / 8.62e-5)) - (1 / 300.15))*-1 = (-1 / (y + 273.15))*-1
+#((((x / (1 / 8.62e-5)) - (1 / 300.15))*-1) * 273.15) + (y*0.003388108) = 1
+#y = (1 - ((((x / (1 / 8.62e-5)) - (1 / 300.15))*-1) * 273.15)) / (((x / (1 / 8.62e-5)) - (1 / 300.15))*-1)
+
+C_to_inverseK <- function(temp_C){
+  inverseK <- (1 / 8.62e-5) * ((1 / 300.15) - (1 / (temp_C + 273.15)))
+  return(inverseK)
+}
+
+inverseK_to_C <- function(inverse_K){
+  temp_C <- (1 - ((((inverse_K / (1 / 8.62e-5)) - (1 / 300.15))*-1) * 273.15)) / (((inverse_K / (1 / 8.62e-5)) - (1 / 300.15))*-1)
+  return(temp_C)
+}
+
+
+#So at the moment the intercept of the model is inverse_K = 0 
+inverseK_to_C(0) 
+#which is 27 degrees C using my function
+#Example: i need a dataset for 22 degrees 
+C_to_inverseK(22) #inverseK for 22degrees
+
+#center on degrees scale first
+data$incb_temp22 <- data$incb_temp - 22 #centering on 22 degrees on degrees scale
+unique(C_to_inverseK(data$incb_temp22)) #converting deviations from 22 degrees into inverseK
+inverseK_to_C(unique(C_to_inverseK(data$incb_temp22))) #back calculating inverseK to degrees
+
+#centering in inverseK scale
+inverseK_to_C(sort(unique(data$inverseK_incb_temp)))
+#can't just substract value from 22 on inverse scale please temps in inverseK scale is not evenly spaced apart. i.e units between 22 - 24 does not equal to 24 -26
+
