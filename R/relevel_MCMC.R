@@ -70,12 +70,55 @@ inverseK_to_C(0)
 #Example: i need a dataset for 22 degrees 
 C_to_inverseK(22) #inverseK for 22degrees
 
-#center on degrees scale first
+#center on degrees scale first THIS WON'T WORK BECAUSE MODEL WILL STILL SET INTERCEPT AT 0
 data$incb_temp22 <- data$incb_temp - 22 #centering on 22 degrees on degrees scale
 unique(C_to_inverseK(data$incb_temp22)) #converting deviations from 22 degrees into inverseK
 inverseK_to_C(unique(C_to_inverseK(data$incb_temp22))) #back calculating inverseK to degrees
 
-#centering in inverseK scale
-inverseK_to_C(sort(unique(data$inverseK_incb_temp)))
-#can't just substract value from 22 on inverse scale please temps in inverseK scale is not evenly spaced apart. i.e units between 22 - 24 does not equal to 24 -26
+#centering in inverseK scale - NEED TO DO THIS ON THIS LEVEL
+tempdat <- data.frame(temp_C = inverseK_to_C(sort(unique(data$inverseK_incb_temp))),
+                      temp_inK = sort(unique(data$inverseK_incb_temp)))
 
+tempdat$dist_frm22_inK_0 <- c(-0.6547592 - -0.6547592,
+                              -0.6547592 - -0.3902114,
+                              -0.6547592 - -0.1292009,
+                              -0.6547592 - 0.1283428,
+                              -0.6547592 - 0.3824882,
+                              -0.6547592 - 0.6333022)
+
+tempdat$dist_frm24_inK_0 <- c(-0.3902114 - -0.6547592,
+                              -0.3902114 - -0.3902114,
+                              -0.3902114 - -0.1292009,
+                              -0.3902114 - 0.1283428,
+                              -0.3902114 - 0.3824882,
+                              -0.3902114 - 0.6333022)
+
+tempdat$dist_frm26_inK_0 <- c(-0.1292009 - -0.6547592,
+                              -0.1292009 - -0.3902114,
+                              -0.1292009 - -0.1292009,
+                              -0.1292009 - 0.1283428,
+                              -0.1292009 - 0.3824882,
+                              -0.1292009 - 0.6333022)
+
+tempdat$dist_frm28_inK_0 <- c(0.1283428 - -0.6547592,
+                              0.1283428 - -0.3902114,
+                              0.1283428 - -0.1292009,
+                              0.1283428 - 0.1283428,
+                              0.1283428 - 0.3824882,
+                              0.1283428 - 0.6333022)
+
+tempdat$dist_frm30_inK_0 <- c(0.3824882 - -0.6547592,
+                              0.3824882 - -0.3902114,
+                              0.3824882 - -0.1292009,
+                              0.3824882 - 0.1283428,
+                              0.3824882 - 0.3824882,
+                              0.3824882 - 0.6333022)
+
+tempdat$dist_frm32_inK_0 <- c(0.6333022 - -0.6547592,
+                              0.6333022 - -0.3902114,
+                              0.6333022 - -0.1292009,
+                              0.6333022 - 0.1283428,
+                              0.6333022 - 0.3824882,
+                              0.6333022 - 0.6333022)
+#can't just substract value from 22 on inverse scale because temps in inverseK scale is not evenly spaced apart. i.e units between 22 - 24 does not equal to 24 -26
+inverseK_to_C(0) 
