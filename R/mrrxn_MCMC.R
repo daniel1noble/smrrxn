@@ -604,3 +604,30 @@ Table2[6,5] <- posterior.mode(m4.VCV[,"traitt_30:traitt_32.id"] / (sqrt(m4.VCV[,
 
 write.csv(Table2, row.names = F, "output/table/Table2.csv")
 write.csv(round(Table2, 2), row.names = F, "output/table/Table2_rounded.csv")
+
+#Temperature specfic repeatability
+#22
+posterior.mode(m4.VCV[,"traitt_22:traitt_22.id"] / ( m4.VCV[,"traitt_22:traitt_22.id"] + m4.VCV[,"traitt_22:traitt_22.units"]))
+HPDinterval(as.mcmc(m4.VCV[,"traitt_22:traitt_22.id"] / ( m4.VCV[,"traitt_22:traitt_22.id"] + m4.VCV[,"traitt_22:traitt_22.units"])))
+
+#24
+posterior.mode(m4.VCV[,"traitt_24:traitt_24.id"] / ( m4.VCV[,"traitt_24:traitt_24.id"] + m4.VCV[,"traitt_24:traitt_24.units"]))
+HPDinterval(as.mcmc(m4.VCV[,"traitt_24:traitt_24.id"] / ( m4.VCV[,"traitt_24:traitt_24.id"] + m4.VCV[,"traitt_24:traitt_24.units"])))
+
+#26
+posterior.mode(m4.VCV[,"traitt_26:traitt_26.id"] / ( m4.VCV[,"traitt_26:traitt_26.id"] + m4.VCV[,"traitt_26:traitt_26.units"]))
+HPDinterval(as.mcmc(m4.VCV[,"traitt_26:traitt_26.id"] / ( m4.VCV[,"traitt_26:traitt_26.id"] + m4.VCV[,"traitt_26:traitt_26.units"])))
+
+#28
+posterior.mode(m4.VCV[,"traitt_28:traitt_28.id"] / ( m4.VCV[,"traitt_28:traitt_28.id"] + m4.VCV[,"traitt_28:traitt_28.units"]))
+HPDinterval(as.mcmc(m4.VCV[,"traitt_28:traitt_28.id"] / ( m4.VCV[,"traitt_28:traitt_28.id"] + m4.VCV[,"traitt_28:traitt_28.units"])))
+
+#30
+posterior.mode(m4.VCV[,"traitt_30:traitt_30.id"] / ( m4.VCV[,"traitt_30:traitt_30.id"] + m4.VCV[,"traitt_30:traitt_30.units"]))
+HPDinterval(as.mcmc(m4.VCV[,"traitt_30:traitt_30.id"] / ( m4.VCV[,"traitt_30:traitt_30.id"] + m4.VCV[,"traitt_30:traitt_30.units"])))
+
+#32
+posterior.mode(m4.VCV[,"traitt_32:traitt_32.id"] / ( m4.VCV[,"traitt_32:traitt_32.id"] + m4.VCV[,"traitt_32:traitt_32.units"]))
+HPDinterval(as.mcmc(m4.VCV[,"traitt_32:traitt_32.id"] / ( m4.VCV[,"traitt_32:traitt_32.id"] + m4.VCV[,"traitt_32:traitt_32.units"])))
+
+Table3 <-
