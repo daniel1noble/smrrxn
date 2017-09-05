@@ -20,24 +20,9 @@ data <- data[incl.vars]
 
 str(data)
 
-#Plotting these temp relationships out
+#The temperatures
 unique(data$incb_temp)
 unique(data$inverseK_incb_temp)
-
-par(mfrow = c(1,2))
-
-mod.inK <- lm(z.log.co2pmin ~ inverseK_incb_temp, data = data)
-mod.C <- lm(z.log.co2pmin ~ incb_temp, data = data)
-
-plot(data$incb_temp, data$z.log.co2pmin)
-abline(mod.C)
-plot(data$inverseK_incb_temp, data$z.log.co2pmin)
-abline(mod.inK)
-
-
-#lme4 model to test recentering of data
-model.1 <- lmer(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + (1+inverseK_incb_temp|id) + (1+inverseK_incb_temp|series), data = data)
-summary(model.1)
 
 #Back calculation from inverse K to C
 
@@ -142,16 +127,163 @@ for(i in 1:length(dat$incb_temp)){
   }
 }
 
-filter(dat, incb_temp == 22) %>% nrow +
-filter(dat, incb_temp == 24) %>% nrow +
-filter(dat, incb_temp == 26) %>% nrow +
-filter(dat, incb_temp == 28) %>% nrow +
-filter(dat, incb_temp == 30) %>% nrow +
-filter(dat, incb_temp == 32) %>% nrow
-  
-length(vec)
-
-head(vec) 
-head(dat$incb_temp)
-
+str(dat) #2401 obs
+length(vec) #2401
 cbind(vec, dat$incb_temp)
+dat$inverseK_incb_temp_22cen <- vec
+
+#trying to create variable which specifies 24 is 0
+select(tempdat, temp_C, dist_frm24_inK_0)
+
+vec <- NULL
+for(i in 1:length(dat$incb_temp)){
+  if(dat$incb_temp[i] == 24){
+    vec[i] <- 0
+  } else if(dat$incb_temp[i] == 22){
+    vec[i] <- 0.2645478
+  } else if(dat$incb_temp[i] == 26){
+    vec[i] <- -0.2610105
+  } else if(dat$incb_temp[i] == 28){
+    vec[i] <- -0.5185542
+  } else if(dat$incb_temp[i] == 30){
+    vec[i] <- -0.7726996
+  } else if(dat$incb_temp[i] == 32){
+    vec[i] <- -1.0235136
+  }
+}
+
+length(vec) #2401
+cbind(vec, dat$incb_temp)
+dat$inverseK_incb_temp_24cen <- vec
+
+#trying to create variable which specifies 26 is 0
+select(tempdat, temp_C, dist_frm26_inK_0)
+
+vec <- NULL
+for(i in 1:length(dat$incb_temp)){
+  if(dat$incb_temp[i] == 26){
+    vec[i] <- 0
+  } else if(dat$incb_temp[i] == 22){
+    vec[i] <-  0.5255583
+  } else if(dat$incb_temp[i] == 24){
+    vec[i] <- 0.2610105
+  } else if(dat$incb_temp[i] == 28){
+    vec[i] <- -0.2575437
+  } else if(dat$incb_temp[i] == 30){
+    vec[i] <- -0.5116891
+  } else if(dat$incb_temp[i] == 32){
+    vec[i] <- -0.7625031
+  }
+}
+
+length(vec)
+cbind(vec, dat$incb_temp)
+dat$inverseK_incb_temp_26cen <- vec
+
+#trying to create variable which specifies 28 is 0
+select(tempdat, temp_C, dist_frm28_inK_0)
+
+vec <- NULL
+for(i in 1:length(dat$incb_temp)){
+  if(dat$incb_temp[i] == 28){
+    vec[i] <- 0
+  } else if(dat$incb_temp[i] == 22){
+    vec[i] <-  0.7831020
+  } else if(dat$incb_temp[i] == 24){
+    vec[i] <- 0.5185542
+  } else if(dat$incb_temp[i] == 26){
+    vec[i] <-  0.2575437
+  } else if(dat$incb_temp[i] == 30){
+    vec[i] <- -0.2541454
+  } else if(dat$incb_temp[i] == 32){
+    vec[i] <- -0.5049594
+  }
+}
+
+length(vec)
+cbind(vec, dat$incb_temp)
+dat$inverseK_incb_temp_28cen <- vec
+
+#trying to create variable which specifies 30 is 0
+select(tempdat, temp_C, dist_frm30_inK_0)
+
+vec <- NULL
+for(i in 1:length(dat$incb_temp)){
+  if(dat$incb_temp[i] == 30){
+    vec[i] <- 0
+  } else if(dat$incb_temp[i] == 22){
+    vec[i] <-  1.0372474
+  } else if(dat$incb_temp[i] == 24){
+    vec[i] <- 0.7726996
+  } else if(dat$incb_temp[i] == 26){
+    vec[i] <-  0.5116891
+  } else if(dat$incb_temp[i] == 28){
+    vec[i] <- 0.2541454
+  } else if(dat$incb_temp[i] == 32){
+    vec[i] <- -0.2508140
+  }
+}
+
+length(vec)
+cbind(vec, dat$incb_temp)
+dat$inverseK_incb_temp_30cen <- vec
+
+#trying to create variable which specifies 32 is 0
+select(tempdat, temp_C, dist_frm32_inK_0)
+
+vec <- NULL
+for(i in 1:length(dat$incb_temp)){
+  if(dat$incb_temp[i] == 32){
+    vec[i] <- 0
+  } else if(dat$incb_temp[i] == 22){
+    vec[i] <- 1.2880614
+  } else if(dat$incb_temp[i] == 24){
+    vec[i] <- 1.0235136
+  } else if(dat$incb_temp[i] == 26){
+    vec[i] <-  0.7625031
+  } else if(dat$incb_temp[i] == 28){
+    vec[i] <- 0.5049594
+  } else if(dat$incb_temp[i] == 30){
+    vec[i] <- 0.2508140
+  }
+}
+
+length(vec)
+cbind(vec, dat$incb_temp)
+dat$inverseK_incb_temp_32cen <- vec
+
+write.csv(dat, row.names = F, "data/data_final/mr_final_recentered.csv")
+
+#lme4 model to test recentering of data
+str(dat)
+select(dat, incb_temp, inverseK_incb_temp,
+       inverseK_incb_temp_22cen, inverseK_incb_temp_24cen, inverseK_incb_temp_26cen, 
+       inverseK_incb_temp_28cen, inverseK_incb_temp_30cen, inverseK_incb_temp_32cen) %>% arrange(incb_temp) %>% filter(incb_temp == 32)
+
+#original
+model.1 <- lmer(z.log.co2pmin ~ inverseK_incb_temp + z.log.mass + (1+inverseK_incb_temp|id) + (1+inverseK_incb_temp|series), data = dat)
+summary(model.1)
+
+#22
+model.1.22 <- lmer(z.log.co2pmin ~ inverseK_incb_temp_22cen + z.log.mass + (1+inverseK_incb_temp_22cen|id) + (1+inverseK_incb_temp_22cen|series), data = dat)
+summary(model.1.22)
+
+#24
+model.1.24 <- lmer(z.log.co2pmin ~ inverseK_incb_temp_24cen + z.log.mass + (1+inverseK_incb_temp_24cen|id) + (1+inverseK_incb_temp_24cen|series), data = dat)
+summary(model.1.24)
+
+#26
+model.1.26 <- lmer(z.log.co2pmin ~ inverseK_incb_temp_26cen + z.log.mass + (1+inverseK_incb_temp_26cen|id) + (1+inverseK_incb_temp_26cen|series), data = dat)
+summary(model.1.26)
+
+#28
+model.1.28 <- lmer(z.log.co2pmin ~ inverseK_incb_temp_28cen + z.log.mass + (1+inverseK_incb_temp_28cen|id) + (1+inverseK_incb_temp_28cen|series), data = dat)
+summary(model.1.28)
+
+#30
+model.1.30 <- lmer(z.log.co2pmin ~ inverseK_incb_temp_30cen + z.log.mass + (1+inverseK_incb_temp_30cen|id) + (1+inverseK_incb_temp_30cen|series), data = dat)
+summary(model.1.30)
+
+#32
+model.1.32 <- lmer(z.log.co2pmin ~ inverseK_incb_temp_32cen + z.log.mass + (1+inverseK_incb_temp_32cen|id) + (1+inverseK_incb_temp_32cen|series), data = dat)
+summary(model.1.32)
