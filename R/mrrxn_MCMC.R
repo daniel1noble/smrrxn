@@ -6,6 +6,8 @@ rm(list = ls())
 #load library
 library(MCMCglmm)
 library(parallel)
+library(dplyr)
+library(ggplot2)
 
 #data
 
@@ -28,6 +30,7 @@ str(dat)
 m1 <- FALSE
 m2 <- FALSE
 m3 <- FALSE
+m4 <- FALSE
 
 #priors
 expanded.prior <- list(R = list(V = 1, nu = 0.002),
@@ -119,34 +122,16 @@ Table1[15,2:3] <- HPDinterval(as.mcmc(R.long)) #Rlong CIs
 write.csv(Table1, "output/table/Table1.csv")
 write.csv(round(Table1,2), "output/table/Table1_rounded.csv")
 
-#Rlong in slope?
-R.long.slope <-  m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"] / ( m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"] + m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.series"]  + m1.VCV[,"units"] )
-
-posterior.mode(R.long.slope)
-HPDinterval(as.mcmc(R.long.slope))
-
-#Rshort in slope?
-R.short.slope <- ( m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"] + m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.series"] ) / ( m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"] + m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.series"]  + m1.VCV[,"units"] )
-
-posterior.mode(R.short.slope)
-HPDinterval(as.mcmc(R.short.slope))
-
-
 #Calculating correlation of ID:slope and series:slope
-id.slope.cor <- m1.VCV[,"inverseK_incb_temp:(Intercept).id"] / ( sd(m1.VCV[,"(Intercept):(Intercept).id"]) * sd(m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"]) )
+id.slope.cor <- m1.VCV[,"inverseK_incb_temp:(Intercept).id"] / ( sqrt(m1.VCV[,"(Intercept):(Intercept).id"]) * sqrt(m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.id"]) )
 hist(id.slope.cor)
 posterior.mode(id.slope.cor)
 HPDinterval(as.mcmc(id.slope.cor))
 
-series.slope.cor <- m1.VCV[,"inverseK_incb_temp:(Intercept).series"] / ( sd(m1.VCV[,"(Intercept):(Intercept).series"]) * sd(m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.series"]) )
+series.slope.cor <- m1.VCV[,"inverseK_incb_temp:(Intercept).series"] / ( sqrt(m1.VCV[,"(Intercept):(Intercept).series"]) * sqrt(m1.VCV[,"inverseK_incb_temp:inverseK_incb_temp.series"]) )
 hist(series.slope.cor)
 posterior.mode(series.slope.cor)
 HPDinterval(as.mcmc(series.slope.cor))
-
-
-
-
-
 
 #m2
 if(m2){
@@ -231,20 +216,43 @@ lizard.names <- data$id %>% as.character %>% unique %>% sort
 output <- do.call("rbind", lapply(1:10, function(i){
   do.call("rbind", lapply(lizard.names, get.predictions, post=cbind(m2.Sol, m2.VCV), sampling.period = i)) %>% mutate(sampling.period = i) %>% arrange(Temperature, predicted) %>% mutate(Lizard = factor(Lizard, levels = unique(Lizard))) 
 }))
+#saveRDS(output, "output/id.rxnnorm.preds")
 
+output <- readRDS("output/id.rxnnorm.preds")
 reaction.norms <- output %>% group_by(Temperature, Lizard, sampling.period) %>% summarise(posterior.mode = posterior.mode(as.mcmc(predicted)), lowerCI = as.numeric(HPDinterval(as.mcmc(predicted)))[1], upperCI = as.numeric(HPDinterval(as.mcmc(predicted)))[2])
 
+reaction.norms$Temperature <- inverseK_to_C(reaction.norms$Temperature)
 str(reaction.norms)
 
 #Plotting reactions
 #reaction.norms %>% ggplot(aes(Lizard, posterior.mode)) + geom_hline(yintercept = 0, linetype = 2) + geom_errorbar(aes(ymin = lowerCI, ymax = upperCI), width = 0) + geom_point() + coord_flip() + facet_wrap(~Temperature) + ylab("Respiration rate")
 
 #pdf("output/fig/reaction.norms.pdf", 10, 6)
-reaction.norms %>% ggplot(aes(x = Temperature, y = posterior.mode, group = Lizard, color = Lizard)) + geom_line() + geom_point(shape = 1, fill = "white", size = 1, color = "black") + facet_wrap(~ sampling.period, nrow = 2) + theme_bw() + theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Temperature (1/K)", y = expression(Metabolic~rate~(CO[2]~min^{-1})))
+reaction.norms %>% 
+  ggplot(aes(x = Temperature, y = posterior.mode, group = Lizard)) +
+  geom_line(color = "grey") + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") +
+  facet_wrap(~ sampling.period, nrow = 2) + 
+  scale_x_continuous(breaks = c(22, 24, 26, 28, 30, 32)) + 
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank()) + 
+  labs(x = expression(paste("Temperature ",degree,"C")), y = expression(Metabolic~rate~(CO[2]~min^{-1})))
 #dev.off()
 
 #pdf("output/fig/ID.rxn.norm.pdf", 9,9)
-reaction.norms %>% ggplot(aes(x = Temperature, y = posterior.mode, group = sampling.period, color = sampling.period)) + geom_line() + geom_point(shape = 1, fill = "white", size = 1, color = "black") + facet_wrap(~ Lizard) + theme_bw() + theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Temperature (1/K)", y = expression(Metabolic~rate~(CO[2]~min^{-1})))
+reaction.norms %>% 
+  ggplot(aes(x = Temperature, y = posterior.mode, group = sampling.period, color = sampling.period)) + 
+  geom_line() + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") + 
+  scale_x_continuous(breaks = c(22, 24, 26, 28, 30, 32)) + 
+  facet_wrap(~ Lizard) + 
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank()) + 
+  labs(x = expression(paste("Temperature ",degree,"C")), y = expression(Metabolic~rate~(CO[2]~min^{-1})))
 #dev.off()
 
 #Plotting covariances
@@ -280,11 +288,13 @@ get.intercept.slope <- function(id = "ld0133", post, sampling.period=1){
 #and the 42 lizard names
 lizard.names <- dat$id %>% as.character %>% unique %>% sort
 
-output <- do.call("rbind", lapply(1:10, function(i){
-  do.call("rbind", lapply(lizard.names, get.intercept.slope, post=cbind(m2.Sol, m2.VCV), sampling.period = i)) %>% mutate(sampling.period = i) %>% arrange(sampling.period) %>% mutate(Lizard = factor(Lizard, levels = unique(Lizard))) 
-}))
+#covar.output <- do.call("rbind", lapply(1:10, function(i){
+  #do.call("rbind", lapply(lizard.names, get.intercept.slope, post=cbind(m2.Sol, m2.VCV), sampling.period = i)) %>% mutate(sampling.period = i) %>% arrange(sampling.period) %>% mutate(Lizard = factor(Lizard, levels = unique(Lizard))) 
+#}))
+#saveRDS(covar.output, "output/covar.preds")
 
-cor.int.slop <- output %>% group_by(Lizard, sampling.period) %>% summarise(global.int = posterior.mode(as.mcmc(global.int)),
+covar.output <- readRDS("output/covar.preds")
+cor.int.slop <- covar.output %>% group_by(Lizard, sampling.period) %>% summarise(global.int = posterior.mode(as.mcmc(global.int)),
                                                                            Ind.int = posterior.mode(as.mcmc(ind.int)),
                                                                            Series.int = posterior.mode(as.mcmc(series.int)),
                                                                            Ind.slope = posterior.mode(as.mcmc(ind.slope)),
@@ -296,19 +306,43 @@ cor.int.slop <- output %>% group_by(Lizard, sampling.period) %>% summarise(globa
                                                                            lower.Ind.slope = HPDinterval(as.mcmc(ind.slope))[,1],
                                                                            upper.Ind.slope = HPDinterval(as.mcmc(ind.slope))[,2],
                                                                            lower.Series.slope = HPDinterval(as.mcmc(series.slope))[,1],
-                                                                           upper.Series.slope = HPDinterval(as.mcmc(series.slope))[,2])
+                                                                           upper.Series.slope = HPDinterval(as.mcmc(series.slope))[,2],)
+
 
 
 #Plotting ints with slopes
 
 #pdf("output/fig/covariance.ID.int.slope.pdf", 10, 6)
-fig2a <- cor.int.slop %>% ggplot(aes(y = Ind.int, x = Ind.slope)) + geom_errorbar(aes(x = Ind.slope, ymin = lower.Ind.int, ymax = upper.Ind.int), color = "#999999", width = 0, size = 0.25)+ geom_errorbarh(aes(x = Ind.slope, xmin = lower.Ind.slope, xmax = upper.Ind.slope), color = "#999999", size = 0.25) + geom_point(shape = 1, fill = "white", size = 1, color = "black")  + facet_wrap(~ sampling.period, nrow = 2) + theme_bw() + theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Slope for ID", y = "Intercept for ID") 
+#fig2a <- 
+  cor.int.slop %>% ggplot(aes(y = Ind.int, x = Ind.slope)) + 
+  geom_errorbar(aes(x = Ind.slope, ymin = lower.Ind.int, ymax = upper.Ind.int), color = "#999999", width = 0, size = 0.25) + 
+  geom_errorbarh(aes(x = Ind.slope, xmin = lower.Ind.slope, xmax = upper.Ind.slope), color = "#999999", size = 0.25) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black")  + facet_wrap(~ sampling.period, nrow = 2) + 
+  theme_bw() + theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = "Slope for ID", y = "Intercept for ID") 
 #dev.off()
+  
+  #pdf("output/fig/covariance.ID.int.slope.pdf", 10, 6)
+  #fig2a <- 
+  cor.int.slop2 %>% ggplot(aes(y = Ind.int, x = Ind.slope, color = z.log.mass)) + 
+    geom_errorbar(aes(x = Ind.slope, ymin = lower.Ind.int, ymax = upper.Ind.int), width = 0, size = 0.25) + 
+    geom_errorbarh(aes(x = Ind.slope, xmin = lower.Ind.slope, xmax = upper.Ind.slope), size = 0.25) + 
+    geom_point(shape = 1, size = 1)  + 
+    facet_wrap(~ sampling.period, nrow = 2) + 
+    theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+    labs(x = "Slope for ID", y = "Intercept for ID") 
+  #dev.off()
 
 #pdf("output/fig/covariance.series.int.slope.pdf", 10, 6)
-fig2b <- cor.int.slop %>% ggplot(aes(y = Series.int, x = Series.slope)) + geom_errorbar(aes(x = Series.slope, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.25, color = "#999999")+ geom_errorbarh(aes(x = Series.slope, xmin = lower.Series.slope, xmax = upper.Series.slope), size = 0.1, color = "#999999") + geom_point(shape = 1, fill = "white", size = 0.25, color = "black")  + facet_wrap(~ sampling.period, nrow = 2) +  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Slope for Series", y = "Intercept for Series") 
+#fig2b <- 
+  cor.int.slop %>% ggplot(aes(y = Series.int, x = Series.slope)) + 
+  geom_errorbar(aes(x = Series.slope, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.25, color = "#999999") +
+  geom_errorbarh(aes(x = Series.slope, xmin = lower.Series.slope, xmax = upper.Series.slope),  color = "#999999", size = 0.25) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black")  + 
+  facet_wrap(~ sampling.period, nrow = 2) +  
+  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = "Slope for Series", y = "Intercept for Series") 
 #dev.off()
-
 
 multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   library(grid)
@@ -351,28 +385,222 @@ multiplot(fig2a, fig2b)
 #dev.off()
 
 #pdf("output/fig/covariance.series.int.slope.samp.period.pdf", 10, 10)
-cor.int.slop %>% ggplot(aes(y = Series.int, x = Series.slope, color = sampling.period)) + geom_errorbar(aes(x = Series.slope, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.8)+ geom_errorbarh(aes(x = Series.slope, xmin = lower.Series.slope, xmax = upper.Series.slope), size = 0.8) + geom_point(shape = 1, fill = "white", size = 1, color = "black")  + facet_wrap(~ Lizard) +  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + labs(x = "Slope for Series", y = "Intercept for Series") 
+cor.int.slop2 %>% 
+  ggplot(aes(y = Series.int, x = Series.slope, color = sampling.period)) + 
+  geom_errorbar(aes(x = Series.slope, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.8) + 
+  geom_errorbarh(aes(x = Series.slope, xmin = lower.Series.slope, xmax = upper.Series.slope), size = 0.8) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black")  + 
+  facet_wrap(~ Lizard) +  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = "Slope for Series", y = "Intercept for Series") 
 #dev.off()
 
 
+#pdf("output/fig/", 10, 10)
+cor.int.slop2 %>% 
+  ggplot(aes(y = Series.int, x = Series.slope, color = z.log.mass)) + 
+  geom_errorbar(aes(x = Series.slope, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.8) + 
+  geom_errorbarh(aes(x = Series.slope, xmin = lower.Series.slope, xmax = upper.Series.slope), size = 0.8) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black")  + 
+  facet_wrap(~ Lizard) +  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = "Slope for Series", y = "Intercept for Series") +
+  scale_colour_gradient(low = "paleturquoise", high = "paleturquoise4", guide = "colourbar")
+#dev.off()
 
+#plot series changes in intercept with mass for each lizard
+str(dat)
+series.mass <- select(dat, id, samp_period, orig_lizmass) %>% 
+  group_by(id, samp_period) %>% 
+  summarise(mean_mass = mean(orig_lizmass))
 
+series.mass$z.log.mass <- scale(log(series.mass$mean_mass))
+names(series.mass) <- c("Lizard", "sampling.period", "mean_mass", "z.log.mass" )
+names(cor.int.slop)
 
-#Intercept model for calculating PCV 
-#m3
-if(m3){
-  m3 <- mclapply(1:3, function(i) {
-    MCMCglmm(z.log.co2pmin ~ 1,
-             random = ~us(1+inverseK_incb_temp):id + us(1+inverseK_incb_temp):series,
-             family = "gaussian",
-             prior = expanded.prior,
-             nitt = 7510000,
-             burnin = 10000,
-             thin = 5000,
-             data = dat, 
-             verbose = T)
-  }, mc.cores = 3)
-}else{
-  m3 <- readRDS("output/rds/m3")
+cor.int.slop2 <- left_join(cor.int.slop, series.mass)
+str(cor.int.slop2)
+
+fig3a <- cor.int.slop2 %>% 
+  ggplot(aes(y = Series.int, x = z.log.mass, color = sampling.period)) + 
+  geom_errorbar(aes(x = z.log.mass, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.3) +
+  #geom_point(shape = 1, size = 1, color = "black", fill = "white")  + 
+  geom_point(shape = 1, size = 1)  + 
+  facet_wrap(~ Lizard) +  
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = "", y = "Intercept for series") 
+  #labs(x = "Z-transformed log mass (g)", y = "Intercept for series") 
+
+fig3b <- cor.int.slop2 %>% 
+  ggplot(aes(y = Series.slope, x = z.log.mass, color = sampling.period)) + 
+  geom_errorbar(aes(x = z.log.mass, ymin = lower.Series.slope, ymax = upper.Series.slope), size = 0.3) + 
+  #geom_point(shape = 1, size = 1, color = "black", fill = "white")  + 
+  geom_point(shape = 1, size = 1)  + 
+  facet_wrap(~ Lizard) +  
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = "Z-transformed log mass (g)", y = "Slope for series") 
+
+#pdf("output/fig/covariance.ID.Series.Mass.pdf", 12, 20)
+multiplot(fig3a, fig3b)
+#dev.off()
+
+#Plotting across sampling period
+
+cor.int.slop2 %>% 
+  ggplot(aes(y = Series.int, x = z.log.mass)) + 
+  geom_errorbar(aes(x = z.log.mass, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.3) + 
+  #geom_point(shape = 1, size = 1, color = "black", fill = "white")  + 
+  geom_point(shape = 1, size = 1)  + 
+  facet_wrap(~sampling.period, nrow = 2) +  
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = "Z-transformed log mass (g)", y = "Intercept for series") 
+
+cor.int.slop2 %>% 
+  ggplot(aes(y = Series.slope, x = z.log.mass)) + 
+  geom_errorbar(aes(x = z.log.mass, ymin = lower.Series.slope, ymax = upper.Series.slope), size = 0.3) + 
+  #geom_point(shape = 1, size = 1, color = "black", fill = "white")  + 
+  geom_point(shape = 1, size = 1)  + 
+  facet_wrap(~sampling.period, nrow = 2) +  
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = "Z-transformed log mass (g)", y = "Slope for series") 
+
+#PLotting ID intercepts and slopes with mass 
+#pdf("output/fig/", 10, 6)
+#fig <- 
+cor.int.slop2 %>% ggplot(aes(y = Ind.int, x = Ind.slope, color = z.log.mass)) + 
+  geom_errorbar(aes(x = Ind.slope, ymin = lower.Ind.int, ymax = upper.Ind.int), width = 0, size = 0.25) + 
+  geom_errorbarh(aes(x = Ind.slope, xmin = lower.Ind.slope, xmax = upper.Ind.slope), size = 0.25) + 
+  geom_point(shape = 1, size = 1)  + 
+  facet_wrap(~ sampling.period, nrow = 2) + 
+  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = "Slope for ID", y = "Intercept for ID")
+#dev.off()
+
+cor.int.slop2 %>% ggplot(aes(y = Ind.int, x = z.log.mass, color = Lizard)) + 
+  geom_errorbar(aes(x = z.log.mass, ymin = lower.Ind.int, ymax = upper.Ind.int), width = 0, size = 0.25) + 
+  geom_point(shape = 1, size = 1)  + 
+  facet_wrap(~ sampling.period, nrow = 2) + 
+  theme_bw() + 
+  theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = "Z-transformed log mass (g)", y = "Intercept for ID")
+
+cor.int.slop2 %>% ggplot(aes(y = Ind.slope, x = z.log.mass, color = Lizard)) + 
+  geom_errorbar(aes(x = z.log.mass, ymin = lower.Ind.slope, ymax = upper.Ind.slope), size = 0.25) + 
+  geom_point(shape = 1, size = 1)  + 
+  facet_wrap(~ sampling.period, nrow = 2) + 
+  theme_bw() +
+  theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = "Z-transformed log mass (g)", y = "Slope for ID") 
+
+#Temperature specific repeatability 
+#m4
+
+multi.prior <- list(R = list(V = diag(6), nu = 0.01), G = list(G1 = list(V = diag(6), nu = 0.01)))
+
+if(m4){
+m4 <- mclapply(1:3, function(i) {
+  MCMCglmm(cbind(t_22, t_24, t_26, t_28, t_30, t_32) ~  z.log.mass,
+           random= ~us(trait):id,
+           rcov = ~us(trait):units,
+           family = c(rep("gaussian", 6)),
+           prior = multi.prior,
+           nitt = 7510000,
+           burnin = 10000,
+           thin = 5000,
+           data = data, 
+           verbose = T)
+}, mc.cores = 3)
+} else{
+  m4 <- readRDS("output/rds/m4_v2")
 }
 
+m4.S <- lapply(m4, function(m) m$Sol)
+m4.Sol <- do.call(rbind, m4.S)
+m4.S1 <- do.call(mcmc.list, m4.S)
+
+gelman.diag(m4.S1, multivariate = F)
+plot(m4.S1)
+summary(m4.S1)
+posterior.mode(m4.Sol)
+HPDinterval(as.mcmc(m4.Sol))
+
+m4.V <- lapply(m4, function(m) m$VCV)
+m4.V1 <- do.call(mcmc.list, m4.V)
+m4.VCV <- do.call(rbind, m4.V)
+
+gelman.diag(m4.V1, multivariate = F)
+summary(m4.V1)
+posterior.mode(m4.VCV)
+HPDinterval(as.mcmc(m4.VCV))
+
+#Tabulating the model output using m1
+Table2 <- data.frame(matrix(nrow = 6 , ncol = 6))
+rownames(Table2) <- c(sort(unique(dat$incb_temp)))
+colnames(Table2) <- c(sort(unique(dat$incb_temp)))
+
+#Variances - the diagonal of matrix
+names(posterior.mode(m4.VCV))
+
+Table2[1,1] <- posterior.mode(m4.VCV)["traitt_22:traitt_22.id"]
+Table2[2,2] <- posterior.mode(m4.VCV)["traitt_24:traitt_24.id"]
+Table2[3,3] <- posterior.mode(m4.VCV)["traitt_26:traitt_26.id"]
+Table2[4,4] <- posterior.mode(m4.VCV)["traitt_28:traitt_28.id"]
+Table2[5,5] <- posterior.mode(m4.VCV)["traitt_30:traitt_30.id"]
+Table2[6,6] <- posterior.mode(m4.VCV)["traitt_32:traitt_32.id"]
+
+#Covariance - upper off diagonal of matrix 
+#row of 22 
+Table2[1,2] <- posterior.mode(m4.VCV)["traitt_22:traitt_24.id"]
+Table2[1,3] <- posterior.mode(m4.VCV)["traitt_22:traitt_26.id"]
+Table2[1,4] <- posterior.mode(m4.VCV)["traitt_22:traitt_28.id"]
+Table2[1,5] <- posterior.mode(m4.VCV)["traitt_22:traitt_30.id"]
+Table2[1,6] <- posterior.mode(m4.VCV)["traitt_22:traitt_32.id"]
+
+#row of 24 
+Table2[2,3] <- posterior.mode(m4.VCV)["traitt_24:traitt_26.id"]
+Table2[2,4] <- posterior.mode(m4.VCV)["traitt_24:traitt_28.id"]
+Table2[2,5] <- posterior.mode(m4.VCV)["traitt_24:traitt_30.id"]
+Table2[2,6] <- posterior.mode(m4.VCV)["traitt_24:traitt_32.id"]
+
+#row of 26 
+Table2[3,4] <- posterior.mode(m4.VCV)["traitt_26:traitt_28.id"]
+Table2[3,5] <- posterior.mode(m4.VCV)["traitt_26:traitt_30.id"]
+Table2[3,6] <- posterior.mode(m4.VCV)["traitt_26:traitt_32.id"]
+
+#row of 28 
+Table2[4,5] <- posterior.mode(m4.VCV)["traitt_28:traitt_30.id"]
+Table2[4,6] <- posterior.mode(m4.VCV)["traitt_28:traitt_32.id"]
+
+#row of 30 
+Table2[5,6] <- posterior.mode(m4.VCV)["traitt_30:traitt_32.id"]
+
+#Correlation - lower off diagonal of matrix 
+#col of 22
+Table2[2,1] <- posterior.mode(m4.VCV[,"traitt_22:traitt_24.id"] / (sqrt(m4.VCV[,"traitt_22:traitt_22.id"]) * sqrt(m4.VCV[,"traitt_24:traitt_24.id"]))) 
+Table2[3,1] <- posterior.mode(m4.VCV[,"traitt_22:traitt_26.id"] / (sqrt(m4.VCV[,"traitt_22:traitt_22.id"]) * sqrt(m4.VCV[,"traitt_26:traitt_26.id"]))) 
+Table2[4,1] <- posterior.mode(m4.VCV[,"traitt_22:traitt_28.id"] / (sqrt(m4.VCV[,"traitt_22:traitt_22.id"]) * sqrt(m4.VCV[,"traitt_28:traitt_28.id"]))) 
+Table2[5,1] <- posterior.mode(m4.VCV[,"traitt_22:traitt_30.id"] / (sqrt(m4.VCV[,"traitt_22:traitt_22.id"]) * sqrt(m4.VCV[,"traitt_30:traitt_30.id"])))
+Table2[6,1] <- posterior.mode(m4.VCV[,"traitt_22:traitt_32.id"] / (sqrt(m4.VCV[,"traitt_22:traitt_22.id"]) * sqrt(m4.VCV[,"traitt_32:traitt_32.id"]))) 
+
+#col of 24
+Table2[3,2] <- posterior.mode(m4.VCV[,"traitt_24:traitt_26.id"] / (sqrt(m4.VCV[,"traitt_24:traitt_24.id"]) * sqrt(m4.VCV[,"traitt_26:traitt_26.id"]))) 
+Table2[4,2] <- posterior.mode(m4.VCV[,"traitt_24:traitt_28.id"] / (sqrt(m4.VCV[,"traitt_24:traitt_24.id"]) * sqrt(m4.VCV[,"traitt_28:traitt_28.id"]))) 
+Table2[5,2] <- posterior.mode(m4.VCV[,"traitt_24:traitt_30.id"] / (sqrt(m4.VCV[,"traitt_24:traitt_24.id"]) * sqrt(m4.VCV[,"traitt_30:traitt_30.id"])))
+Table2[6,2] <- posterior.mode(m4.VCV[,"traitt_24:traitt_32.id"] / (sqrt(m4.VCV[,"traitt_24:traitt_24.id"]) * sqrt(m4.VCV[,"traitt_32:traitt_32.id"]))) 
+
+#col of 26
+Table2[4,3] <- posterior.mode(m4.VCV[,"traitt_26:traitt_28.id"] / (sqrt(m4.VCV[,"traitt_26:traitt_26.id"]) * sqrt(m4.VCV[,"traitt_28:traitt_28.id"]))) 
+Table2[5,3] <- posterior.mode(m4.VCV[,"traitt_26:traitt_30.id"] / (sqrt(m4.VCV[,"traitt_26:traitt_26.id"]) * sqrt(m4.VCV[,"traitt_30:traitt_30.id"])))
+Table2[6,3] <- posterior.mode(m4.VCV[,"traitt_26:traitt_32.id"] / (sqrt(m4.VCV[,"traitt_26:traitt_26.id"]) * sqrt(m4.VCV[,"traitt_32:traitt_32.id"]))) 
+
+#col of 28
+Table2[5,4] <- posterior.mode(m4.VCV[,"traitt_28:traitt_30.id"] / (sqrt(m4.VCV[,"traitt_28:traitt_28.id"]) * sqrt(m4.VCV[,"traitt_30:traitt_30.id"])))
+Table2[6,4] <- posterior.mode(m4.VCV[,"traitt_28:traitt_32.id"] / (sqrt(m4.VCV[,"traitt_28:traitt_28.id"]) * sqrt(m4.VCV[,"traitt_32:traitt_32.id"])))
+
+#col of 30
+Table2[6,5] <- posterior.mode(m4.VCV[,"traitt_30:traitt_32.id"] / (sqrt(m4.VCV[,"traitt_30:traitt_30.id"]) * sqrt(m4.VCV[,"traitt_32:traitt_32.id"]))) 
+
+write.csv(Table2, row.names = F, "output/table/Table2.csv")
+write.csv(round(Table2, 2), row.names = F, "output/table/Table2_rounded.csv")
