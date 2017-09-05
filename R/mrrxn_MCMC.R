@@ -9,6 +9,8 @@ library(parallel)
 library(dplyr)
 library(ggplot2)
 
+source("R/functions/smr_functions.R")
+
 #data
 
 data <- read.csv("data/data_final/mrrxn_final_v2.csv")
@@ -308,6 +310,17 @@ cor.int.slop <- covar.output %>% group_by(Lizard, sampling.period) %>% summarise
                                                                            lower.Series.slope = HPDinterval(as.mcmc(series.slope))[,1],
                                                                            upper.Series.slope = HPDinterval(as.mcmc(series.slope))[,2],)
 
+series.mass <- select(dat, id, samp_period, orig_lizmass) %>% 
+  group_by(id, samp_period) %>% 
+  summarise(mean_mass = mean(orig_lizmass))
+
+series.mass$z.log.mass <- scale(log(series.mass$mean_mass))
+names(series.mass) <- c("Lizard", "sampling.period", "mean_mass", "z.log.mass" )
+names(cor.int.slop)
+
+cor.int.slop2 <- left_join(cor.int.slop, series.mass)
+str(cor.int.slop2)
+
 
 
 #Plotting ints with slopes
@@ -407,17 +420,6 @@ cor.int.slop2 %>%
 #dev.off()
 
 #plot series changes in intercept with mass for each lizard
-str(dat)
-series.mass <- select(dat, id, samp_period, orig_lizmass) %>% 
-  group_by(id, samp_period) %>% 
-  summarise(mean_mass = mean(orig_lizmass))
-
-series.mass$z.log.mass <- scale(log(series.mass$mean_mass))
-names(series.mass) <- c("Lizard", "sampling.period", "mean_mass", "z.log.mass" )
-names(cor.int.slop)
-
-cor.int.slop2 <- left_join(cor.int.slop, series.mass)
-str(cor.int.slop2)
 
 fig3a <- cor.int.slop2 %>% 
   ggplot(aes(y = Series.int, x = z.log.mass, color = sampling.period)) + 
@@ -467,8 +469,7 @@ cor.int.slop2 %>%
   labs(x = "Z-transformed log mass (g)", y = "Slope for series") 
 
 #PLotting ID intercepts and slopes with mass 
-#pdf("output/fig/", 10, 6)
-#fig <- 
+#pdf("output/fig/ID.covar.mass.pdf", 10, 6)
 cor.int.slop2 %>% ggplot(aes(y = Ind.int, x = Ind.slope, color = z.log.mass)) + 
   geom_errorbar(aes(x = Ind.slope, ymin = lower.Ind.int, ymax = upper.Ind.int), width = 0, size = 0.25) + 
   geom_errorbarh(aes(x = Ind.slope, xmin = lower.Ind.slope, xmax = upper.Ind.slope), size = 0.25) + 
@@ -478,7 +479,7 @@ cor.int.slop2 %>% ggplot(aes(y = Ind.int, x = Ind.slope, color = z.log.mass)) +
   labs(x = "Slope for ID", y = "Intercept for ID")
 #dev.off()
 
-cor.int.slop2 %>% ggplot(aes(y = Ind.int, x = z.log.mass, color = Lizard)) + 
+fig4a <- cor.int.slop2 %>% ggplot(aes(y = Ind.int, x = z.log.mass, color = Lizard)) + 
   geom_errorbar(aes(x = z.log.mass, ymin = lower.Ind.int, ymax = upper.Ind.int), width = 0, size = 0.25) + 
   geom_point(shape = 1, size = 1)  + 
   facet_wrap(~ sampling.period, nrow = 2) + 
@@ -486,7 +487,7 @@ cor.int.slop2 %>% ggplot(aes(y = Ind.int, x = z.log.mass, color = Lizard)) +
   theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
   labs(x = "Z-transformed log mass (g)", y = "Intercept for ID")
 
-cor.int.slop2 %>% ggplot(aes(y = Ind.slope, x = z.log.mass, color = Lizard)) + 
+fig4b <- cor.int.slop2 %>% ggplot(aes(y = Ind.slope, x = z.log.mass, color = Lizard)) + 
   geom_errorbar(aes(x = z.log.mass, ymin = lower.Ind.slope, ymax = upper.Ind.slope), size = 0.25) + 
   geom_point(shape = 1, size = 1)  + 
   facet_wrap(~ sampling.period, nrow = 2) + 
@@ -494,6 +495,9 @@ cor.int.slop2 %>% ggplot(aes(y = Ind.slope, x = z.log.mass, color = Lizard)) +
   theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
   labs(x = "Z-transformed log mass (g)", y = "Slope for ID") 
 
+#pdf("output/fig/between.ID.mass.int.slop.pdf", 10, 10)
+multiplot(fig4a, fig4b)
+#dev.off()
 #Temperature specific repeatability 
 #m4
 
@@ -636,3 +640,17 @@ Table3[6,2:3] <- HPDinterval(as.mcmc(m4.VCV[,"traitt_32:traitt_32.id"] / ( m4.VC
 
 write.csv(Table3, row.names = F, 'output/table/Table3.csv')
 write.csv(round(Table3, 2), row.names = F, 'output/table/Table3_rounded.csv')
+
+#Plotting thermal repeatability
+table3.dat <- Table3
+table3.dat$temp <- row.names(Table3)
+colnames(table3.dat)[1] <- "Repeatability"
+
+#pdf("output/fig/thermal.rep.pdf", 6, 6)
+table3.dat %>% ggplot(aes(y = Repeatability, x = temp)) + 
+  geom_errorbar(aes(x = temp, ymin = lower, ymax = upper), size = 0.4, width = 0.2) + 
+  geom_point(shape = 1, size = 1)  + 
+  theme_bw() +
+  theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = expression(paste("Temperature ",degree,"C")), y = "Repeatability") 
+#dev.off()
