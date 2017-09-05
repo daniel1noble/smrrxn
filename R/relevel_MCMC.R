@@ -76,6 +76,7 @@ unique(C_to_inverseK(data$incb_temp22)) #converting deviations from 22 degrees i
 inverseK_to_C(unique(C_to_inverseK(data$incb_temp22))) #back calculating inverseK to degrees
 
 #centering in inverseK scale - NEED TO DO THIS ON THIS LEVEL
+#can't just substract value from 22 on inverse scale because temps in inverseK scale is not evenly spaced apart. i.e units between 22 - 24 does not equal to 24 -26
 tempdat <- data.frame(temp_C = inverseK_to_C(sort(unique(data$inverseK_incb_temp))),
                       temp_inK = sort(unique(data$inverseK_incb_temp)))
 
@@ -120,5 +121,37 @@ tempdat$dist_frm32_inK_0 <- c(0.6333022 - -0.6547592,
                               0.6333022 - 0.1283428,
                               0.6333022 - 0.3824882,
                               0.6333022 - 0.6333022)
-#can't just substract value from 22 on inverse scale because temps in inverseK scale is not evenly spaced apart. i.e units between 22 - 24 does not equal to 24 -26
-inverseK_to_C(0) 
+
+#trying to create variable which specifies 22 is 0
+select(tempdat, temp_C, dist_frm22_inK_0)
+
+vec <- NULL
+for(i in 1:length(dat$incb_temp)){
+  if(dat$incb_temp[i] == 22){
+    vec[i] <- 0
+  } else if(dat$incb_temp[i] == 24){
+    vec[i] <- -0.2645478
+  } else if(dat$incb_temp[i] == 26){
+    vec[i] <- -0.5255583
+  } else if(dat$incb_temp[i] == 28){
+    vec[i] <- -0.7831020
+  } else if(dat$incb_temp[i] == 30){
+    vec[i] <- -1.0372474
+  } else if(dat$incb_temp[i] == 32){
+    vec[i] <- -1.2880614
+  }
+}
+
+filter(dat, incb_temp == 22) %>% nrow +
+filter(dat, incb_temp == 24) %>% nrow +
+filter(dat, incb_temp == 26) %>% nrow +
+filter(dat, incb_temp == 28) %>% nrow +
+filter(dat, incb_temp == 30) %>% nrow +
+filter(dat, incb_temp == 32) %>% nrow
+  
+length(vec)
+
+head(vec) 
+head(dat$incb_temp)
+
+cbind(vec, dat$incb_temp)
