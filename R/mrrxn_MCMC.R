@@ -215,7 +215,7 @@ incubation.temperatures <- unique(dat$inverseK_incb_temp)
 #and the 42 lizard names
 lizard.names <- data$id %>% as.character %>% unique %>% sort
 
-output <- do.call("rbind", lapply(1:10, function(i){
+#output <- do.call("rbind", lapply(1:10, function(i){
   do.call("rbind", lapply(lizard.names, get.predictions, post=cbind(m2.Sol, m2.VCV), sampling.period = i)) %>% mutate(sampling.period = i) %>% arrange(Temperature, predicted) %>% mutate(Lizard = factor(Lizard, levels = unique(Lizard))) 
 }))
 #saveRDS(output, "output/id.rxnnorm.preds")
@@ -310,18 +310,17 @@ cor.int.slop <- covar.output %>% group_by(Lizard, sampling.period) %>% summarise
                                                                            lower.Series.slope = HPDinterval(as.mcmc(series.slope))[,1],
                                                                            upper.Series.slope = HPDinterval(as.mcmc(series.slope))[,2],)
 
-series.mass <- select(dat, id, samp_period, orig_lizmass) %>% 
+series.mass <- select(dat, id, samp_period, orig_lizmass, inverseK_prior_temp2) %>% 
   group_by(id, samp_period) %>% 
-  summarise(mean_mass = mean(orig_lizmass))
+  summarise(mean_mass = mean(orig_lizmass),
+            mean_prior_temp = mean(inverseK_prior_temp2))
 
 series.mass$z.log.mass <- scale(log(series.mass$mean_mass))
-names(series.mass) <- c("Lizard", "sampling.period", "mean_mass", "z.log.mass" )
+names(series.mass) <- c("Lizard", "sampling.period", "mean_mass", "z.log.mass", "prior_temp")
 names(cor.int.slop)
 
 cor.int.slop2 <- left_join(cor.int.slop, series.mass)
 str(cor.int.slop2)
-
-
 
 #Plotting ints with slopes
 
@@ -408,9 +407,20 @@ cor.int.slop2 %>%
 #dev.off()
 
 
-#pdf("output/fig/", 10, 10)
+#relationship with mass
 cor.int.slop2 %>% 
   ggplot(aes(y = Series.int, x = Series.slope, color = z.log.mass)) + 
+  geom_errorbar(aes(x = Series.slope, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.8) + 
+  geom_errorbarh(aes(x = Series.slope, xmin = lower.Series.slope, xmax = upper.Series.slope), size = 0.8) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black")  + 
+  facet_wrap(~ Lizard) +  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
+  labs(x = "Slope for Series", y = "Intercept for Series") +
+  scale_colour_gradient(low = "paleturquoise", high = "paleturquoise4", guide = "colourbar")
+#dev.off()
+
+#Relationshp with prior temp
+cor.int.slop2 %>% 
+  ggplot(aes(y = Series.int, x = Series.slope, color = prior_temp)) + 
   geom_errorbar(aes(x = Series.slope, ymin = lower.Series.int, ymax = upper.Series.int), width = 0, size = 0.8) + 
   geom_errorbarh(aes(x = Series.slope, xmin = lower.Series.slope, xmax = upper.Series.slope), size = 0.8) + 
   geom_point(shape = 1, fill = "white", size = 1, color = "black")  + 
@@ -535,6 +545,7 @@ m4.V1 <- do.call(mcmc.list, m4.V)
 m4.VCV <- do.call(rbind, m4.V)
 
 gelman.diag(m4.V1, multivariate = F)
+plot(m4.V1)
 summary(m4.V1)
 posterior.mode(m4.VCV)
 HPDinterval(as.mcmc(m4.VCV))
@@ -654,3 +665,27 @@ table3.dat %>% ggplot(aes(y = Repeatability, x = temp)) +
   theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
   labs(x = expression(paste("Temperature ",degree,"C")), y = "Repeatability") 
 #dev.off()
+ 
+
+##### Dan's code to construction VCV matrix #####
+
+mat <-posterior.mode(m4.VCV)
+HPDinterval(as.mcmc(m4.VCV))
+
+loctions3 <- grep("id", names(mat))
+B <- mat[loctions3]
+
+B_mat_cov <- matrix(B, nrow = 6, ncol = 6)
+B_mat_cor <- cov2cor(B_mat_cov)
+
+# B = posterior.mode
+matrices <- function(B, names = c(22, 24, 26, 28, 30, 32)){
+  B_mat_cov <- round(matrix(B, nrow = 6, ncol = 6),2)
+  B_mat_cor <- round(cov2cor(B_mat_cov),2)
+  colnames(B_mat_cov) <- colnames(B_mat_cor) <- names
+  rownames(B_mat_cov) <- rownames(B_mat_cor) <- names
+  
+  return(list(cov = B_mat_cov, cor = B_mat_cor))
+}
+
+matrices(B = B)
