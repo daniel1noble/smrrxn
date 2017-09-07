@@ -8,6 +8,12 @@ data <- read.csv("data/data_final/mr_final_recentered.csv")
 data$id <- as.factor(data$id)
 data$series <- as.factor(data$series)
 
+#priors
+expanded.prior <- list(R = list(V = 1, nu = 0.002),
+                       G = list(G1 = list(V = diag(2), nu = 0.002, alpha.V = diag(1000,2,2), alpha.mu = rep(0,2)),
+                                G2 = list(V = diag(2), nu = 0.002, alpha.V = diag(1000,2,2), alpha.mu = rep(0,2))))
+
+
 #22 centered
 if(m1_t22){
   m1_t22 <- mclapply(1:3, function(i) {
