@@ -40,6 +40,23 @@ if(m1_t24){
   saveRDS(m1_t24, "R/m1_t24")
 }
 
+#26 centered
+if(m1_t26){
+  m1_t26 <- mclapply(1:3, function(i) {
+    MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp_26cen + z.log.mass + inverseK_prior_temp2,
+             random = ~us(1+inverseK_incb_temp_26cen):id + us(1+inverseK_incb_temp_26cen):series,
+             family = "gaussian",
+             prior = expanded.prior,
+             nitt = 7510000,
+             burnin = 10000,
+             thin = 5000,
+             data = data, 
+             verbose = T)
+  }, mc.cores = 3)
+  saveRDS(m1_t26, "R/m1_t26")
+}
+
+
 #28 centered
 if(m1_t28){
   m1_t28 <- mclapply(1:3, function(i) {
