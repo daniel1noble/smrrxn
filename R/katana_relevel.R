@@ -1,0 +1,89 @@
+setwd("~/gitrepo/smrrxn/")
+
+#load library
+library(MCMCglmm)
+library(parallel)
+
+data <- read.csv("data/data_final/mr_final_recentered.csv")
+data$id <- as.factor(data$id)
+data$series <- as.factor(data$series)
+
+#22 centered
+if(m1_t22){
+  m1_t22 <- mclapply(1:3, function(i) {
+    MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp_22cen + z.log.mass + inverseK_prior_temp2,
+             random = ~us(1+inverseK_incb_temp_22cen):id + us(1+inverseK_incb_temp_22cen):series,
+             family = "gaussian",
+             prior = expanded.prior,
+             nitt = 7510000,
+             burnin = 10000,
+             thin = 5000,
+             data = data, 
+             verbose = T)
+  }, mc.cores = 3)
+  saveRDS(m1_t22, "R/m1_t22")
+}
+
+#24 centered
+if(m1_t24){
+  m1_t24 <- mclapply(1:3, function(i) {
+    MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp_24cen + z.log.mass + inverseK_prior_temp2,
+             random = ~us(1+inverseK_incb_temp_24cen):id + us(1+inverseK_incb_temp_24cen):series,
+             family = "gaussian",
+             prior = expanded.prior,
+             nitt = 7510000,
+             burnin = 10000,
+             thin = 5000,
+             data = data, 
+             verbose = T)
+  }, mc.cores = 3)
+  saveRDS(m1_t24, "R/m1_t24")
+}
+
+#28 centered
+if(m1_t28){
+  m1_t28 <- mclapply(1:3, function(i) {
+    MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp_28cen + z.log.mass + inverseK_prior_temp2,
+             random = ~us(1+inverseK_incb_temp_28cen):id + us(1+inverseK_incb_temp_28cen):series,
+             family = "gaussian",
+             prior = expanded.prior,
+             nitt = 7510000,
+             burnin = 10000,
+             thin = 5000,
+             data = data, 
+             verbose = T)
+  }, mc.cores = 3)
+  saveRDS(m1_t28, "R/m1_t28")
+}
+
+#30 centered
+if(m1_t30){
+  m1_t30 <- mclapply(1:3, function(i) {
+    MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp_30cen + z.log.mass + inverseK_prior_temp2,
+             random = ~us(1+inverseK_incb_temp_30cen):id + us(1+inverseK_incb_temp_30cen):series,
+             family = "gaussian",
+             prior = expanded.prior,
+             nitt = 7510000,
+             burnin = 10000,
+             thin = 5000,
+             data = data, 
+             verbose = T)
+  }, mc.cores = 3)
+  saveRDS(m1_t30, "R/m1_t30")
+}
+
+#32 centered
+if(m1_t32){
+  m1_t32 <- mclapply(1:3, function(i) {
+    MCMCglmm(z.log.co2pmin ~ inverseK_incb_temp_32cen + z.log.mass + inverseK_prior_temp2,
+             random = ~us(1+inverseK_incb_temp_32cen):id + us(1+inverseK_incb_temp_32cen):series,
+             family = "gaussian",
+             prior = expanded.prior,
+             nitt = 7510000,
+             burnin = 10000,
+             thin = 5000,
+             data = data, 
+             verbose = T)
+  }, mc.cores = 3)
+  saveRDS(m1_t32, "R/m1_t32")
+}
