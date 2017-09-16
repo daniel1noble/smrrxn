@@ -643,6 +643,30 @@ cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))
 write.csv(Table2, row.names = F, "output/table/Table2.csv")
 write.csv(round(Table2, 2), row.names = F, "output/table/Table2_rounded.csv")
 
+#Graphing correlation matrix
+library(reshape2)
+my.cor <- cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))$cor
+melted.cor <- melt(my.cor)
+names(melted.cor)[3] <- "Correlation"
+
+ggplot(data = melted.cor, aes(x = X1, y = X2, fill = Correlation)) +
+  geom_tile() + 
+  scale_fill_continuous(low = "navyblue", high = "orangered2") +
+  scale_x_continuous(breaks = c(sort(unique(dat$incb_temp)))) + 
+  scale_y_continuous(breaks = c(sort(unique(dat$incb_temp)))) +
+  geom_text(aes(X1, X2, label = Correlation), color = "white", size = 3) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks = element_blank(),
+        legend.justification = c(1, 0))
+        #legend.position = c(0.6, 0.7),
+        #legend.direction = "horizontal") 
+  #guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+                               title.position = "top", title.hjust = 0.5))
 
 #Tabulating the model output using m1 for within ID var and covar
 mat <-posterior.mode(m4.VCV)
