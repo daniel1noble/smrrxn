@@ -508,6 +508,7 @@ fig4b <- cor.int.slop2 %>% ggplot(aes(y = Ind.slope, x = z.log.mass, color = Liz
 #pdf("output/fig/between.ID.mass.int.slop.pdf", 10, 10)
 multiplot(fig4a, fig4b)
 #dev.off()
+
 #Temperature specific repeatability 
 #m4
 
@@ -550,7 +551,7 @@ summary(m4.V1)
 posterior.mode(m4.VCV)
 HPDinterval(as.mcmc(m4.VCV))
 
-#Tabulating the model output using m1
+#Tabulating the model output using m1 for between ID var and covar
 Table2 <- data.frame(matrix(nrow = 6 , ncol = 6))
 rownames(Table2) <- c(sort(unique(dat$incb_temp)))
 colnames(Table2) <- c(sort(unique(dat$incb_temp)))
@@ -617,8 +618,38 @@ Table2[6,4] <- posterior.mode(m4.VCV[,"traitt_28:traitt_32.id"] / (sqrt(m4.VCV[,
 #col of 30
 Table2[6,5] <- posterior.mode(m4.VCV[,"traitt_30:traitt_32.id"] / (sqrt(m4.VCV[,"traitt_30:traitt_30.id"]) * sqrt(m4.VCV[,"traitt_32:traitt_32.id"]))) 
 
+
+##### Dan's code to construction VCV matrix for Between ID #####
+# B = posterior.mode
+cor_cov_matrices <- function(B, names = c(22, 24, 26, 28, 30, 32)){
+  B_mat_cov <- round(matrix(B, nrow = 6, ncol = 6),2)
+  if(corpcor::is.positive.definite(B_mat_cov)){
+  B_mat_cor <- round(cov2cor(B_mat_cov),2)
+  } else (
+    B_mat_cor <- round(cov2cor(corpcor::make.positive.definite(B_mat_cov)),2)
+    )
+  colnames(B_mat_cov) <- colnames(B_mat_cor) <- names
+  rownames(B_mat_cov) <- rownames(B_mat_cor) <- names
+  
+  return(list(cov = B_mat_cov, cor = B_mat_cor))
+}
+
+mat <-posterior.mode(m4.VCV)
+loctions3 <- grep("id", names(mat))
+B <- mat[loctions3]
+
+cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))
+
 write.csv(Table2, row.names = F, "output/table/Table2.csv")
 write.csv(round(Table2, 2), row.names = F, "output/table/Table2_rounded.csv")
+
+
+#Tabulating the model output using m1 for within ID var and covar
+mat <-posterior.mode(m4.VCV)
+loctions3 <- grep("units", names(mat))
+B2 <- mat[loctions3]
+
+cor_cov_matrices(B = B2, names = c(sort(unique(dat$incb_temp))))
 
 #Temperature specfic repeatability
 Table3 <- data.frame(matrix(nrow = 6 , ncol = 3))
@@ -665,27 +696,93 @@ table3.dat %>% ggplot(aes(y = Repeatability, x = temp)) +
   theme(legend.position = "none", panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + 
   labs(x = expression(paste("Temperature ",degree,"C")), y = "Repeatability") 
 #dev.off()
- 
 
-##### Dan's code to construction VCV matrix #####
+forestdat <- data.frame(matrix(nrow = 6, ncol = 9))
+rownames(forestdat) <- sort(unique(dat$incb_temp))
+colnames(forestdat) <- c("Rpt", "Rpt_l", "Rpt_u", 
+                         "ID_var", "ID_var_l", "ID_var_u",
+                         "E_var", "E_var_l", "E_var_u")
 
-mat <-posterior.mode(m4.VCV)
-HPDinterval(as.mcmc(m4.VCV))
+#Between
+x <- c(sort(unique(dat$incb_temp)))
+locs.id <- match(paste0("traitt_",x,":traitt_",x,".id"), colnames(m4.VCV))
+m4.VCV[,locs.id]
+forestdat[,4] <- posterior.mode(m4.VCV[,locs.id])
+forestdat[,5:6] <- HPDinterval(as.mcmc(m4.VCV[,locs.id]))
 
-loctions3 <- grep("id", names(mat))
-B <- mat[loctions3]
+#Within variances
+x <- c(sort(unique(dat$incb_temp)))
+locs.e <- match(paste0("traitt_",x,":traitt_",x,".units"), colnames(m4.VCV))
+m4.VCV[,locs.e]
+forestdat[,7] <- posterior.mode(m4.VCV[,locs.e])
+forestdat[,8:9] <- HPDinterval(as.mcmc(m4.VCV[,locs.e]))
 
-B_mat_cov <- matrix(B, nrow = 6, ncol = 6)
-B_mat_cor <- cov2cor(B_mat_cov)
+#Repeatabilty
+#22
+forestdat[1,1] <- posterior.mode(m4.VCV[,"traitt_22:traitt_22.id"] / ( m4.VCV[,"traitt_22:traitt_22.id"] + m4.VCV[,"traitt_22:traitt_22.units"]))
+forestdat[1,2:3] <- HPDinterval(as.mcmc(m4.VCV[,"traitt_22:traitt_22.id"] / ( m4.VCV[,"traitt_22:traitt_22.id"] + m4.VCV[,"traitt_22:traitt_22.units"])))
 
-# B = posterior.mode
-matrices <- function(B, names = c(22, 24, 26, 28, 30, 32)){
-  B_mat_cov <- round(matrix(B, nrow = 6, ncol = 6),2)
-  B_mat_cor <- round(cov2cor(B_mat_cov),2)
-  colnames(B_mat_cov) <- colnames(B_mat_cor) <- names
-  rownames(B_mat_cov) <- rownames(B_mat_cor) <- names
-  
-  return(list(cov = B_mat_cov, cor = B_mat_cor))
-}
+#24
+forestdat[2,1] <- posterior.mode(m4.VCV[,"traitt_24:traitt_24.id"] / ( m4.VCV[,"traitt_24:traitt_24.id"] + m4.VCV[,"traitt_24:traitt_24.units"]))
+forestdat[2,2:3] <- HPDinterval(as.mcmc(m4.VCV[,"traitt_24:traitt_24.id"] / ( m4.VCV[,"traitt_24:traitt_24.id"] + m4.VCV[,"traitt_24:traitt_24.units"])))
 
-matrices(B = B)
+#26
+forestdat[3,1] <- posterior.mode(m4.VCV[,"traitt_26:traitt_26.id"] / ( m4.VCV[,"traitt_26:traitt_26.id"] + m4.VCV[,"traitt_26:traitt_26.units"]))
+forestdat[3,2:3] <- HPDinterval(as.mcmc(m4.VCV[,"traitt_26:traitt_26.id"] / ( m4.VCV[,"traitt_26:traitt_26.id"] + m4.VCV[,"traitt_26:traitt_26.units"])))
+
+#28
+forestdat[4,1] <- posterior.mode(m4.VCV[,"traitt_28:traitt_28.id"] / ( m4.VCV[,"traitt_28:traitt_28.id"] + m4.VCV[,"traitt_28:traitt_28.units"]))
+forestdat[4,2:3] <- HPDinterval(as.mcmc(m4.VCV[,"traitt_28:traitt_28.id"] / ( m4.VCV[,"traitt_28:traitt_28.id"] + m4.VCV[,"traitt_28:traitt_28.units"])))
+
+#30
+forestdat[5,1] <- posterior.mode(m4.VCV[,"traitt_30:traitt_30.id"] / ( m4.VCV[,"traitt_30:traitt_30.id"] + m4.VCV[,"traitt_30:traitt_30.units"]))
+forestdat[5,2:3] <- HPDinterval(as.mcmc(m4.VCV[,"traitt_30:traitt_30.id"] / ( m4.VCV[,"traitt_30:traitt_30.id"] + m4.VCV[,"traitt_30:traitt_30.units"])))
+
+#32
+forestdat[6,1] <- posterior.mode(m4.VCV[,"traitt_32:traitt_32.id"] / ( m4.VCV[,"traitt_32:traitt_32.id"] + m4.VCV[,"traitt_32:traitt_32.units"]))
+forestdat[6,2:3] <- HPDinterval(as.mcmc(m4.VCV[,"traitt_32:traitt_32.id"] / ( m4.VCV[,"traitt_32:traitt_32.id"] + m4.VCV[,"traitt_32:traitt_32.units"])))
+
+forestdat$temp <- x
+library(tidyr)
+
+#rearrange data set
+
+
+#plotting this out
+fig5a <- ggplot(data = forestdat, aes(x = temp, y = Rpt)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = Rpt_l, ymax = Rpt_u), width = 0) +
+  scale_y_continuous(limits = c(0,1)) + 
+  scale_x_continuous(breaks = x) + 
+  labs(y = "repeatability", x = "Temperature") +
+  coord_flip() +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank()) 
+
+#Between ID
+fig5b <- ggplot(data = forestdat, aes(x = temp, y = ID_var)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = ID_var_l, ymax = ID_var_u), width = 0) +
+  scale_y_continuous(limits = c(0,3.5)) + 
+  scale_x_continuous(breaks = x) + 
+  labs(y = "between-individual variance", x = "Temperature") +
+  coord_flip() +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank()) 
+
+#Within ID
+fig5c <- ggplot(data = forestdat, aes(x = temp, y = E_var)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = E_var_l, ymax = E_var_u), width = 0) +
+  scale_y_continuous(limits = c(0,1)) + 
+  scale_x_continuous(breaks = x) + 
+  labs(y = "within-individual variance", x = "Temperature") +
+  coord_flip() +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank()) 
+
+multiplot(fig5a, fig5b, fig5c, cols = 3)
+
