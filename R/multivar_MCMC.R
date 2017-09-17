@@ -8,9 +8,10 @@ library(MCMCglmm)
 library(parallel)
 
 #data
-data <- read.csv("data/data_final/multiresp.csv")
-#data$id <- as.factor(data$id)
-#data$series <- as.factor(data$series)
+data <- read.csv("data/data_final/multiresp_wi_t_z.csv")
+#data <- read.csv("data/data_final/mrrxn_final_v2.csv")
+data$id <- as.factor(data$id)
+data$series <- as.factor(data$series)
 
 #varibs.need <- c("obs", "samp_period", "id" ,"batch", "series", "incb_num", "incb_temp_id", "defecate", "incb_temp", "z.incb_temp", "z.log.temp", "incb_temp_K", "inverseK_incb_temp", "body_temp", "z.body_temp", "z.log.body_temp", "body_temp_K", "inverseK_body_temp" , "z.prior_temp1", "z.log.prior_temp1", "prior_temp1_K", "inverseK_prior_temp1", "prior_temp2_K", "inverseK_prior_temp2", "z.prior_temp2", "z.log.prior_temp2", "orig_lizmass", "lizmass_nocombout","orig_lizmass", "log.mass", "z.log.mass","orig_co2_pmin", "co2pm_nocombout", "log.co2pmin", "z.log.co2pmin")
 
@@ -18,18 +19,25 @@ data <- read.csv("data/data_final/multiresp.csv")
 #data <- data[incl.vars]
 
 #data3 <- data %>% 
-  #select(id, samp_period, series, incb_temp, z.log.co2pmin, orig_lizmass) %>%
+  #select(id, samp_period, series, incb_temp, orig_co2_pmin, orig_lizmass) %>%
   #group_by(series) %>%
   #mutate(avg_mass = mean(orig_lizmass)) %>%
-  #select(id, samp_period, series, incb_temp, z.log.co2pmin, avg_mass) %>%
-  #spread(incb_temp, z.log.co2pmin) 
+  #select(id, samp_period, series, incb_temp, orig_co2_pmin, avg_mass) %>%
+  #spread(incb_temp, orig_co2_pmin) 
   
-# colnames(data3)[5:10] <- paste0("t_", colnames(data3)[5:10])
+#colnames(data3)[5:10] <- paste0("t_", colnames(data3)[5:10])
 
 #data3$z.log.mass <- scale(log(data3$avg_mass))
+#data3$t_22 <- scale(log(data3$t_22))
+#data3$t_24 <- scale(log(data3$t_24))
+#data3$t_26 <- scale(log(data3$t_26))
+#data3$t_28 <- scale(log(data3$t_28))
+#data3$t_30 <- scale(log(data3$t_30))
+#data3$t_32 <- scale(log(data3$t_32))
+
 #data3 <- as.data.frame(data3)
 #data4 <- data3[!is.na(data3$z.log.mass),]
-#(data4, row.names = F, "data/data_final/multiresp.csv")
+#write.csv(data4, row.names = F, "data/data_final/multiresp_wi_t_z.csv")
 
 #priors
 multi.prior <- list(R = list(V = diag(6), nu = 0.01), G = list(G1 = list(V = diag(6), nu = 0.01)))
@@ -48,7 +56,7 @@ multi.prior <- list(R = list(V = diag(6), nu = 0.01), G = list(G1 = list(V = dia
              verbose = T)
   }, mc.cores = 3)
   
- saveRDS(m4, "R/m4")
+ saveRDS(m4, "R/m4_t_z")
 
 
 
