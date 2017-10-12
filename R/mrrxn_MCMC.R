@@ -1,4 +1,4 @@
-setwd("~/gitrepo/smrrxn/")
+setwd("~/Dropbox/smrrxn/")
 
 #clear envir
 rm(list = ls())
@@ -217,7 +217,7 @@ lizard.names <- data$id %>% as.character %>% unique %>% sort
 
 #output <- do.call("rbind", lapply(1:10, function(i){
   do.call("rbind", lapply(lizard.names, get.predictions, post=cbind(m2.Sol, m2.VCV), sampling.period = i)) %>% mutate(sampling.period = i) %>% arrange(Temperature, predicted) %>% mutate(Lizard = factor(Lizard, levels = unique(Lizard))) 
-}))
+
 #saveRDS(output, "output/id.rxnnorm.preds")
 
 output <- readRDS("output/id.rxnnorm.preds")
