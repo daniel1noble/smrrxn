@@ -994,10 +994,6 @@ forestdat[6,1] <- posterior.mode(m4.VCV[,"traitt_32:traitt_32.id"] / ( m4.VCV[,"
 forestdat[6,2:3] <- HPDinterval(as.mcmc(m4.VCV[,"traitt_32:traitt_32.id"] / ( m4.VCV[,"traitt_32:traitt_32.id"] + m4.VCV[,"traitt_32:traitt_32.units"])))
 
 forestdat$temp <- x
-library(tidyr)
-
-#rearrange data set
-
 
 #plotting this out
 fig5a <- ggplot(data = forestdat, aes(x = temp, y = Rpt)) +
@@ -1005,7 +1001,7 @@ fig5a <- ggplot(data = forestdat, aes(x = temp, y = Rpt)) +
   geom_errorbar(aes(ymin = Rpt_l, ymax = Rpt_u), width = 0) +
   scale_y_continuous(limits = c(0,1)) + 
   scale_x_continuous(breaks = x) + 
-  labs(y = "repeatability", x = "Temperature") +
+  labs(y = "Repeatability", x = "Temperature") +
   coord_flip() +
   theme_bw() +
   theme(panel.grid.major = element_blank(), 
@@ -1017,7 +1013,7 @@ fig5b <- ggplot(data = forestdat, aes(x = temp, y = ID_var)) +
   geom_errorbar(aes(ymin = ID_var_l, ymax = ID_var_u), width = 0) +
   scale_y_continuous(limits = c(0,3.5)) + 
   scale_x_continuous(breaks = x) + 
-  labs(y = "between-individual variance", x = "Temperature") +
+  labs(y = "Between-individual variance", x = " ") +
   coord_flip() +
   theme_bw() +
   theme(panel.grid.major = element_blank(), 
@@ -1029,11 +1025,12 @@ fig5c <- ggplot(data = forestdat, aes(x = temp, y = E_var)) +
   geom_errorbar(aes(ymin = E_var_l, ymax = E_var_u), width = 0) +
   scale_y_continuous(limits = c(0,1)) + 
   scale_x_continuous(breaks = x) + 
-  labs(y = "within-individual variance", x = "Temperature") +
+  labs(y = "Within-individual variance", x = " ") +
   coord_flip() +
   theme_bw() +
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank()) 
 
+#pdf("output/fig/variancecomponentts.pdf", 12, 7)
 multiplot(fig5a, fig5b, fig5c, cols = 3)
-
+#dev.off()
