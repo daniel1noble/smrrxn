@@ -656,6 +656,7 @@ cor_cov_matrices(B = low_B, names = c(sort(unique(dat$incb_temp))))
 write.csv(cor_cov_matrices(B = low_B, names = c(sort(unique(dat$incb_temp))))$cov,"output/table/betweenID_covariance_lower.csv")
 write.csv(cor_cov_matrices(B = low_B, names = c(sort(unique(dat$incb_temp))))$cor,"output/table/betweenID_correlation_lower.csv")
 
+#Between individual correlations - upper credible intervals
 upper_mat <- HPDinterval(as.mcmc(m4.VCV))[,2]
 locs_bw_upper <- grep("id", names(upper_mat))
 upper_B <- upper_mat[locs_bw_upper]
@@ -663,7 +664,6 @@ upper_B <- upper_mat[locs_bw_upper]
 cor_cov_matrices(B = upper_B, names = c(sort(unique(dat$incb_temp))))
 write.csv(cor_cov_matrices(B = upper_B, names = c(sort(unique(dat$incb_temp))))$cov,"output/table/betweenID_covariance_upper.csv")
 write.csv(cor_cov_matrices(B = upper_B, names = c(sort(unique(dat$incb_temp))))$cor,"output/table/betweenID_correlation_upper.csv")
-
 
 #Within individual correlations
 mat <-posterior.mode(m4.VCV)
@@ -674,32 +674,226 @@ cor_cov_matrices(B = w, names = c(sort(unique(dat$incb_temp))))
 write.csv(cor_cov_matrices(B = w, names = c(sort(unique(dat$incb_temp))))$cor, "output/table/withinID_correlations.csv")
 write.csv(cor_cov_matrices(B = w, names = c(sort(unique(dat$incb_temp))))$cov, "output/table/withinID_covariance.csv")
 
+#Within individual correlations - lower credible intervals
+locs_wi_lower <- grep("units", names(lower_mat))
+low_W <- lower_mat[locs_wi_lower]
 
+cor_cov_matrices(B = low_W, names = c(sort(unique(dat$incb_temp))))
+write.csv(cor_cov_matrices(B = low_W, names = c(sort(unique(dat$incb_temp))))$cor, "output/table/withinID_lower_correlations.csv")
+write.csv(cor_cov_matrices(B = low_W, names = c(sort(unique(dat$incb_temp))))$cov, "output/table/withinID_lower_covariance.csv")
 
-#Graphing between individual correlation matrix
+#Within individual correlations - upper credible intervals
+locs_w_upper <- grep("units", names(upper_mat))
+upper_W <- upper_mat[locs_w_upper]
+
+cor_cov_matrices(B = upper_W, names = c(sort(unique(dat$incb_temp))))
+write.csv(cor_cov_matrices(B = upper_W, names = c(sort(unique(dat$incb_temp))))$cor, "output/table/withinID_upper_correlations.csv")
+write.csv(cor_cov_matrices(B = upper_W, names = c(sort(unique(dat$incb_temp))))$cov, "output/table/withinID_upper_covariance.csv")
+
+#################################################################
+#Graphing BETWEEN individual correlation matrix (posterior mode)#
+#################################################################
 library(reshape2)
-my.cor <- cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))$cor
-melted.cor <- melt(my.cor)
-names(melted.cor)[3] <- "Correlation"
+#posterior mode
+bw.cor <- cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))$cor
+melted.between_cor <- melt(bw.cor)
+names(melted.between_cor)[3] <- "Correlation"
 
-ggplot(data = melted.cor, aes(x = X1, y = X2, fill = Correlation)) +
+#lower
+bw.cor_lower <- cor_cov_matrices(B = low_B, names = c(sort(unique(dat$incb_temp))))$cor
+melted.bw.cor.lower <- melt(bw.cor_lower)
+names(melted.bw.cor.lower)[3] <- "Lower"
+melted.between_cor$Lower <- melted.bw.cor.lower$Lower
+melted.between_cor$Lower[c(1, 8, 15, 22, 29, 36)] <- rep(c(" "),6)
+
+#upper
+bw.cor_upper <- cor_cov_matrices(B = upper_B, names = c(sort(unique(dat$incb_temp))))$cor
+melted.bw.cor.upper <- melt(bw.cor_upper)
+names(melted.bw.cor.upper)[3] <- "Upper"
+melted.between_cor$Upper <- melted.bw.cor.upper$Upper
+melted.between_cor$Upper[c(1, 8, 15, 22, 29, 36)] <- rep(c(" "),6)
+
+melted.between_cor$Correlation_2 <- paste0(melted.between_cor$Correlation, "\n" , " (", melted.between_cor$Lower, ",", melted.between_cor$Upper, ") ")
+melted.between_cor$Correlation_2[c(1, 8, 15, 22, 29, 36)] <- rep(c(1),6)
+
+#PLOT FOR BETWEEN ID correlation
+#pdf("output/fig/betweenID_cor.pdf", 7, 7)
+ggplot(data = melted.between_cor, aes(x = Var1, y = Var2, fill = Correlation)) +
   geom_tile() + 
-  scale_fill_continuous(low = "navyblue", high = "orangered2") +
+  scale_fill_continuous(low = "navyblue", high = "orangered2",
+                        limits = c(-1,1),
+                        labels = c(-1, -0.5, 0, 0.5, 1),
+                        breaks = c(-1, -0.5, 0, 0.5, 1)) +
   scale_x_continuous(breaks = c(sort(unique(dat$incb_temp)))) + 
   scale_y_continuous(breaks = c(sort(unique(dat$incb_temp)))) +
-  geom_text(aes(X1, X2, label = Correlation), color = "white", size = 3) +
-  theme(panel.grid.major = element_blank(), 
+  geom_text(aes(Var1, Var2, label = Correlation_2), color = "white", size = 3) +
+  labs(title = "Between ID correlations",
+       subtitle = "Shrinkage method used") + 
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         axis.title.x = element_blank(),
         axis.title.y = element_blank(),
         panel.border = element_blank(),
         panel.background = element_blank(),
         axis.ticks = element_blank(),
-        legend.justification = c(1, 0))
-        #legend.position = c(0.6, 0.7),
-        #legend.direction = "horizontal") 
-  #guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
-                               title.position = "top", title.hjust = 0.5))
+        legend.justification = c(1, 0),
+        legend.position = "bottom",
+        legend.direction = "horizontal") 
+
+#dev.off()
+
+#################################################################
+#Graphing BETWEEN individual covariance matrix (posterior mode)#
+#################################################################
+#posterior mode
+bw.cov <- cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))$cov
+melted.between_cov <- melt(bw.cov)
+names(melted.between_cov)[3] <- "Covariance"
+
+#lower
+bw.cov_lower <- cor_cov_matrices(B = low_B, names = c(sort(unique(dat$incb_temp))))$cov
+melted.bw.cov.lower <- melt(bw.cov_lower)
+names(melted.bw.cov.lower)[3] <- "Lower"
+melted.between_cov$Lower <- melted.bw.cov.lower$Lower
+
+#upper
+bw.cov_upper <- cor_cov_matrices(B = upper_B, names = c(sort(unique(dat$incb_temp))))$cov
+melted.bw.cov.upper <- melt(bw.cov_upper)
+names(melted.bw.cov.upper)[3] <- "Upper"
+melted.between_cov$Upper <- melted.bw.cov.upper$Upper
+
+melted.between_cov$Covariance_lab <- paste0(melted.between_cov$Covariance, "\n" , " (", melted.between_cov$Lower, ",", melted.between_cov$Upper, ") ")
+
+#PLOT FOR BETWEEN ID covariance
+#pdf("output/fig/betweenID_cov.pdf", 7, 7)
+ggplot(data = melted.between_cov, aes(x = Var1, y = Var2, fill = Covariance)) +
+  geom_tile() + 
+  scale_fill_continuous(low = "navyblue", high = "orangered2") +
+  scale_x_continuous(breaks = c(sort(unique(dat$incb_temp)))) + 
+  scale_y_continuous(breaks = c(sort(unique(dat$incb_temp)))) +
+  geom_text(aes(Var1, Var2, label = Covariance_lab), color = "white", size = 3) +
+  labs(title = "Between ID covariance") + 
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks = element_blank(),
+        legend.justification = c(1, 0),
+        legend.position = "bottom",
+        legend.direction = "horizontal") 
+
+#dev.off()
+
+#################################################################
+#Graphing WITHIN individual correlation matrix (posterior mode)##
+#################################################################
+#posterior mode
+w.cor <- cor_cov_matrices(B = w, names = c(sort(unique(dat$incb_temp))))$cor
+melted.within_cor <- melt(w.cor)
+names(melted.within_cor)[3] <- "Correlation"
+
+#lower
+w.cor_lower <- cor_cov_matrices(B = low_W, names = c(sort(unique(dat$incb_temp))))$cor
+melted.w.cor.lower <- melt(w.cor_lower)
+names(melted.w.cor.lower)[3] <- "Lower"
+melted.within_cor$Lower <- melted.w.cor.lower$Lower
+
+#upper
+w.cor_upper <- cor_cov_matrices(B = upper_W, names = c(sort(unique(dat$incb_temp))))$cor
+melted.w.cor.upper <- melt(w.cor_upper)
+names(melted.w.cor.upper)[3] <- "Upper"
+melted.within_cor$Upper <- melted.w.cor.upper$Upper
+
+melted.within_cor$Correlation_2 <- paste0(melted.within_cor$Correlation, "\n" , " (", melted.within_cor$Lower, ",", melted.within_cor$Upper, ") ")
+melted.within_cor$Correlation_2[c(1, 8, 15, 22, 29, 36)] <- rep(c(1),6)
+
+#PLOT FOR WITHIN ID correlation
+#pdf("output/fig/withinID_cor.pdf", 7, 7)
+ggplot(data = melted.within_cor, aes(x = Var1, y = Var2, fill = Correlation)) +
+  geom_tile() + 
+  scale_fill_continuous(low = "navyblue", high = "orangered2",
+                        limits = c(-1,1),
+                        labels = c(-1, -0.5, 0, 0.5, 1),
+                        breaks = c(-1, -0.5, 0, 0.5, 1)) +
+  scale_x_continuous(breaks = c(sort(unique(dat$incb_temp)))) + 
+  scale_y_continuous(breaks = c(sort(unique(dat$incb_temp)))) +
+  geom_text(aes(Var1, Var2, label = Correlation_2), color = "white", size = 3) +
+  labs(title = "Within ID correlations") + 
+  theme(plot.title = element_text(hjust = 0.5),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks = element_blank(),
+        legend.justification = c(1, 0),
+        legend.position = "bottom",
+        legend.direction = "horizontal") 
+
+#dev.off()
+
+#################################################################
+#Graphing WITHIN individual covariance matrix (posterior mode)###
+#################################################################
+
+#posterior mode
+w.cov <- cor_cov_matrices(B = w, names = c(sort(unique(dat$incb_temp))))$cov
+#w.cov[lower.tri(w.cov)] <- NA
+melted.within_cov <- melt(w.cov)
+names(melted.within_cov)[3] <- "Covariance"
+
+#lower
+w.cov_lower <- cor_cov_matrices(B = low_W, names = c(sort(unique(dat$incb_temp))))$cov
+#w.cov_lower[lower.tri(w.cov_lower)] <- NA
+melted.w.cov.lower <- melt(w.cov_lower)
+names(melted.w.cov.lower)[3] <- "Lower"
+melted.within_cov$Lower <- melted.w.cov.lower$Lower
+
+#upper
+w.cov_upper <- cor_cov_matrices(B = upper_W, names = c(sort(unique(dat$incb_temp))))$cov
+#w.cov_upper[lower.tri(w.cov_upper)] <- NA
+melted.w.cov.upper <- melt(w.cov_upper)
+names(melted.w.cov.upper)[3] <- "Upper"
+melted.within_cov$Upper <- melted.w.cov.upper$Upper
+
+melted.within_cov$Covariance_labs <- paste0(melted.within_cov$Covariance, "\n" , " (", melted.within_cov$Lower, ",", melted.within_cov$Upper, ") ")
+
+
+#PLOT FOR WITHIN ID correlation
+#pdf("output/fig/withinID_cov.pdf", 7, 7)
+ggplot(data = melted.within_cov, aes(x = Var1, y = Var2, fill = Covariance)) +
+  geom_tile() + 
+  scale_fill_continuous(low = "navyblue", high = "orangered2",
+                        limits = c(-1,1),
+                        labels = c(-1, -0.5, 0, 0.5, 1),
+                        breaks = c(-1, -0.5, 0, 0.5, 1)) +
+  scale_x_continuous(breaks = c(sort(unique(dat$incb_temp)))) + 
+  scale_y_continuous(breaks = c(sort(unique(dat$incb_temp)))) +
+  geom_text(aes(Var1, Var2, label = Covariance_labs), color = "white", size = 3) +
+  labs(title = "Within ID covariance") + 
+  theme(plot.title = element_text(hjust = 0.5),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks = element_blank(),
+        legend.justification = c(1, 0),
+        legend.position = "bottom",
+        legend.direction = "horizontal") 
+#dev.off()
+
+
+
+#Forest plot of variances
 
 #Tabulating the model output using m1 for within ID var and covar
 mat <-posterior.mode(m4.VCV)
