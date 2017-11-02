@@ -216,11 +216,12 @@ incubation.temperatures <- unique(dat$inverseK_incb_temp)
 lizard.names <- data$id %>% as.character %>% unique %>% sort
 
 #output <- do.call("rbind", lapply(1:10, function(i){
-  do.call("rbind", lapply(lizard.names, get.predictions, post=cbind(m2.Sol, m2.VCV), sampling.period = i)) %>% mutate(sampling.period = i) %>% arrange(Temperature, predicted) %>% mutate(Lizard = factor(Lizard, levels = unique(Lizard))) 
+  #do.call("rbind", lapply(lizard.names, get.predictions, post=cbind(m2.Sol, m2.VCV), sampling.period = i)) %>% mutate(sampling.period = i) %>% arrange(Temperature, predicted) %>% mutate(Lizard = factor(Lizard, levels = unique(Lizard)))
+#}))
 
 #saveRDS(output, "output/id.rxnnorm.preds")
-
 output <- readRDS("output/id.rxnnorm.preds")
+
 reaction.norms <- output %>% group_by(Temperature, Lizard, sampling.period) %>% summarise(posterior.mode = posterior.mode(as.mcmc(predicted)), lowerCI = as.numeric(HPDinterval(as.mcmc(predicted)))[1], upperCI = as.numeric(HPDinterval(as.mcmc(predicted)))[2])
 
 reaction.norms$Temperature <- inverseK_to_C(reaction.norms$Temperature)
@@ -231,8 +232,8 @@ str(reaction.norms)
 
 #pdf("output/fig/reaction.norms.pdf", 10, 6)
 reaction.norms %>% 
-  ggplot(aes(x = Temperature, y = posterior.mode, group = Lizard)) +
-  geom_line(color = "grey") + 
+  ggplot(aes(x = Temperature, y = posterior.mode, group = Lizard, color = Lizard)) +
+  geom_line() + 
   geom_point(shape = 1, fill = "white", size = 1, color = "black") +
   facet_wrap(~ sampling.period, nrow = 2) + 
   scale_x_continuous(breaks = c(22, 24, 26, 28, 30, 32)) + 
@@ -631,7 +632,7 @@ cor_cov_matrices <- function(B, names = c(22, 24, 26, 28, 30, 32)){
   colnames(B_mat_cov) <- colnames(B_mat_cor) <- names
   rownames(B_mat_cov) <- rownames(B_mat_cor) <- names
   
-  return(list(cov = B_mat_cov, cor = B_mat_cor))
+  return(list(cov = B_mat_cov, print(corpcor::is.positive.definite(B_mat_cov)), cor = B_mat_cor))
 }
 
 mat <-posterior.mode(m4.VCV)
@@ -640,10 +641,42 @@ B <- mat[loctions3]
 
 cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))
 
+#Between individual correlations - posterior modes
 write.csv(Table2, row.names = F, "output/table/Table2.csv")
 write.csv(round(Table2, 2), row.names = F, "output/table/Table2_rounded.csv")
+write.csv(cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))$cor, "output/table/betweenID_correlations.csv")
+write.csv(cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))$cov, "output/table/betweenID_covariance.csv")
 
-#Graphing correlation matrix
+#Between individual correlations - lower credible intervals
+lower_mat <- HPDinterval(as.mcmc(m4.VCV))[,1]
+locs_bw_lower <- grep("id", names(lower_mat))
+low_B <- lower_mat[locs_bw_lower]
+
+cor_cov_matrices(B = low_B, names = c(sort(unique(dat$incb_temp))))
+write.csv(cor_cov_matrices(B = low_B, names = c(sort(unique(dat$incb_temp))))$cov,"output/table/betweenID_covariance_lower.csv")
+write.csv(cor_cov_matrices(B = low_B, names = c(sort(unique(dat$incb_temp))))$cor,"output/table/betweenID_correlation_lower.csv")
+
+upper_mat <- HPDinterval(as.mcmc(m4.VCV))[,2]
+locs_bw_upper <- grep("id", names(upper_mat))
+upper_B <- upper_mat[locs_bw_upper]
+
+cor_cov_matrices(B = upper_B, names = c(sort(unique(dat$incb_temp))))
+write.csv(cor_cov_matrices(B = upper_B, names = c(sort(unique(dat$incb_temp))))$cov,"output/table/betweenID_covariance_upper.csv")
+write.csv(cor_cov_matrices(B = upper_B, names = c(sort(unique(dat$incb_temp))))$cor,"output/table/betweenID_correlation_upper.csv")
+
+
+#Within individual correlations
+mat <-posterior.mode(m4.VCV)
+loctions_w <- grep("units", names(mat))
+w <- mat[loctions_w]
+
+cor_cov_matrices(B = w, names = c(sort(unique(dat$incb_temp))))
+write.csv(cor_cov_matrices(B = w, names = c(sort(unique(dat$incb_temp))))$cor, "output/table/withinID_correlations.csv")
+write.csv(cor_cov_matrices(B = w, names = c(sort(unique(dat$incb_temp))))$cov, "output/table/withinID_covariance.csv")
+
+
+
+#Graphing between individual correlation matrix
 library(reshape2)
 my.cor <- cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))$cor
 melted.cor <- melt(my.cor)
