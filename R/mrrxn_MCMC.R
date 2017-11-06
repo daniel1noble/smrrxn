@@ -627,37 +627,38 @@ write.csv(cor_cov_matrices(B = upper_W, names = c(sort(unique(dat$incb_temp))))$
 
 #posterior mode
 bw.cor <- cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))$cor
-melted.between_cor <- melt(bw.cor)
+melted.between_cor <- melt(get_lower_tri(bw.cor))
 names(melted.between_cor)[3] <- "Correlation"
+melted.between_cor$Correlation[c(1, 8, 15, 22, 29, 36)] <- rep(c(1),6)
 
 #lower
 bw.cor_lower <- cor_cov_matrices(B = low_B, names = c(sort(unique(dat$incb_temp))))$cor
-melted.bw.cor.lower <- melt(bw.cor_lower)
+melted.bw.cor.lower <- melt(get_lower_tri(bw.cor_lower))
 names(melted.bw.cor.lower)[3] <- "Lower"
 melted.between_cor$Lower <- melted.bw.cor.lower$Lower
-melted.between_cor$Lower[c(1, 8, 15, 22, 29, 36)] <- rep(c(" "),6)
 
 #upper
 bw.cor_upper <- cor_cov_matrices(B = upper_B, names = c(sort(unique(dat$incb_temp))))$cor
-melted.bw.cor.upper <- melt(bw.cor_upper)
+melted.bw.cor.upper <- melt(get_lower_tri(bw.cor_upper))
 names(melted.bw.cor.upper)[3] <- "Upper"
 melted.between_cor$Upper <- melted.bw.cor.upper$Upper
-melted.between_cor$Upper[c(1, 8, 15, 22, 29, 36)] <- rep(c(" "),6)
 
-melted.between_cor$Correlation_2 <- paste0(melted.between_cor$Correlation, "\n" , " (", melted.between_cor$Lower, ",", melted.between_cor$Upper, ") ")
-melted.between_cor$Correlation_2[c(1, 8, 15, 22, 29, 36)] <- rep(c(1),6)
+melted.between_cor$Correlation_labs <- paste0(melted.between_cor$Correlation, "\n" , " (", melted.between_cor$Lower, ",", melted.between_cor$Upper, ") ")
+
+melted.between_cor$Correlation_labs[c(7, 13, 14, 19, 20, 21, 25, 26, 27, 28, 31, 32, 33, 34, 35)] <- c(" ")
+melted.between_cor$Correlation_labs[c(1, 8, 15, 22, 29, 36)] <- c("1")
 
 #PLOT FOR BETWEEN ID correlation
 #pdf("output/fig/betweenID_cor.pdf", 7, 7)
 ggplot(data = melted.between_cor, aes(x = Var1, y = Var2, fill = Correlation)) +
-  geom_tile() + 
+  geom_tile(colour = "White") + 
   scale_fill_continuous(low = "navyblue", high = "orangered2",
                         limits = c(-1,1),
                         labels = c(-1, -0.5, 0, 0.5, 1),
-                        breaks = c(-1, -0.5, 0, 0.5, 1)) +
+                        breaks = c(-1, -0.5, 0, 0.5, 1), na.value = "white") +
   scale_x_continuous(breaks = c(sort(unique(dat$incb_temp)))) + 
   scale_y_continuous(breaks = c(sort(unique(dat$incb_temp)))) +
-  geom_text(aes(Var1, Var2, label = Correlation_2), color = "white", size = 3) +
+  geom_text(aes(Var1, Var2, label = Correlation_labs), color = "white", size = 3) +
   labs(title = "Between ID correlations",
        subtitle = "Shrinkage method used") + 
   theme(plot.title = element_text(hjust = 0.5),
@@ -670,7 +671,7 @@ ggplot(data = melted.between_cor, aes(x = Var1, y = Var2, fill = Correlation)) +
         panel.background = element_blank(),
         axis.ticks = element_blank(),
         legend.justification = c(1, 0),
-        legend.position = "bottom",
+        legend.position = c(0.35, 0.85),
         legend.direction = "horizontal") 
 
 #dev.off()
@@ -753,7 +754,6 @@ melted.within_cor$Upper <- melted.w.cor.upper$Upper
 melted.within_cor$Correlation_labs <- paste0(melted.within_cor$Correlation, "\n" , " (", melted.within_cor$Lower, ",", melted.within_cor$Upper, ") ")
 melted.within_cor$Correlation_labs[c(1, 8, 15, 22, 29, 36)] <- rep(c(1),6)
 melted.within_cor$Correlation_labs[c(7, 13, 14, 19, 20, 21, 25, 26, 27, 28, 31, 32, 33, 34, 35)] <- " "
-
 
 #PLOT FOR WITHIN ID correlation
 #pdf("output/fig/withinID_cor.pdf", 7, 7)
