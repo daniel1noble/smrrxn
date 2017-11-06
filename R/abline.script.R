@@ -1,4 +1,8 @@
-#Script to get indivual intercept and slope + their global intercept and slope and then plotting this as abline lines
+library(dplyr)
+library(tidyr)
+
+#Script to get indivual intercept and slope + their global intercept and slope and then plotting this as y
+abline lines
 #What do I need for this....
 #Dataframe for each individual at each sampling period at each temp
 #lizard.id, sampling.period, temp, pred.mr, intercept, slope
@@ -69,7 +73,9 @@ ab.reaction.norms$Temperature <- inverseK_to_C(ab.reaction.norms$Temperature)
 
 str(ab.reaction.norms) ; head(ab.reaction.norms)
 
-ab.rn <- select(ab.reaction.norms, Temperature, Lizard, sampling.period, pred.mr) %>% mutate(series = paste0(Lizard, "_", sampling.period)) %>% arrange(series)
+#ab.rn <- select(ab.reaction.norms, Temperature, Lizard, sampling.period, pred.mr) %>% mutate(series = paste0(Lizard, "_", sampling.period)) %>% arrange(series)
+saveRDS(ab.rn, "output/rds/ab.rn")
+ab.rn <- readRDS("output/rds/ab.rn")
 
 lm_extract <- function(x){
     tmpmod <- lm(pred.mr ~ Temperature, data = x)
@@ -123,8 +129,46 @@ mtext(expression(paste(italic("N")[ID], " = 100")), side=1,line=-1,adj=1)
 mtext(expression(paste(italic("n")[trial], " = 20")), side=1,line=-2,adj=1)
 
 
+#Graph to show between and within correltions between temps
+lm_extract_mr <- function(x){
+  tmpmod <- lm(mr.32 ~ mr.22, data = x)
+  coefs <-coef(tmpmod)
+  return(coefs)
+}
+
+#Filtering dataset to se Temps 32 and 22 only 
+longfor.22.32 <- filter(ab.rn, Temperature == "32" | Temperature == "22") %>% spread(Temperature, pred.mr)
+names(longfor.22.32)[6] <- "mr.22"
+names(longfor.22.32)[7] <- "mr.32"
+
+long.dat.22.32 <- select(longfor.22.32, Lizard, sampling.period, series, mr.22, mr.32)
+#spliting dataset to calculating individual reg lines
+split.22.32 <- split(long.dat.22.32, long.dat.22.32$Lizard)
+
+dat.22.32.coefs <- as.data.frame(do.call("rbind", lapply(split.22.32, function(x) lm_extract_mr(x))))
+dat.22.32.coefs$Lizard <- rownames(dat.22.32.coefs)
+names(dat.22.32.coefs) <- c("b0", "b1", "Lizard")
+
+str(dat.22.32.coefs) ; str(long.dat.22.32) #fucking dataframes, can't use left_join, convert as tbl
+dat.22.32.coefs <- as.tbl(dat.22.32.coefs)
+long.dat.22.32 <- as.tbl(long.dat.22.32)
+
+long.dat.22.32.dat <- left_join(long.dat.22.32, dat.22.32.coefs, by = "Lizard")
+
+ggplot(data = long.dat.22.32.dat, aes(y = mr.32, x = mr.22, group = "Lizard")) +
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") +
+  #geom_abline(aes(intercept = b0, slope = b1, colour = Lizard)) +
+  #stat_smooth(aes(group = Lizard, colour = Lizard), method = "lm", se = FALSE) + 
+  geom_line(aes(group = Lizard, colour = Lizard), stat="smooth", method = "lm", alpha = 0.6) + 
+  labs(y = expression(Metabolic~rate~(CO[2]~min^{-1})~at~32~paste(degree,"C")),
+       x = expression(Metabolic~rate~(CO[2]~min^{-1})~at~22~paste(degree,"C"))) +
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
 
 
 
 
+ab.reaction.norms[ab.reaction.norms$Temperature == "32","pred.mr"]
 
