@@ -1,8 +1,37 @@
+
+
+setwd("~/Dropbox/smrrxn/")
+
+#clear envir
+rm(list = ls())
+
+#load library
+library(MCMCglmm)
+library(parallel)
 library(dplyr)
+library(ggplot2)
 library(tidyr)
 
+source("R/functions/smr_functions.R")
+
+#data
+
+data <- read.csv("data/data_final/mrrxn_final_v2.csv")
+data$id <- as.factor(data$id)
+data$series <- as.factor(data$series)
+
+varibs.need <- c("obs", "samp_period", "id" ,"batch", "series", "incb_num", "incb_temp_id", "defecate", "incb_temp", "z.incb_temp", "z.log.temp", "incb_temp_K", "inverseK_incb_temp", "body_temp", "z.body_temp", "z.log.body_temp", "body_temp_K", "inverseK_body_temp" , "z.prior_temp1", "z.log.prior_temp1", "prior_temp1_K", "inverseK_prior_temp1", "prior_temp2_K", "inverseK_prior_temp2", "z.prior_temp2", "z.log.prior_temp2", "orig_lizmass", "lizmass_nocombout", "log.mass", "z.log.mass","orig_co2_pmin", "co2pm_nocombout", "log.co2pmin", "z.log.co2pmin")
+
+incl.vars <- names(data) %in% varibs.need
+data <- data[incl.vars]
+
+predictors <- c("z.log.co2pmin", "inverseK_incb_temp", "z.log.mass", "inverseK_prior_temp2", "id", "series")
+
+dat <- data[complete.cases(data[,predictors]),]
+str(dat)
+
 #Script to get indivual intercept and slope + their global intercept and slope and then plotting this as y
-abline lines
+#abline lines
 #What do I need for this....
 #Dataframe for each individual at each sampling period at each temp
 #lizard.id, sampling.period, temp, pred.mr, intercept, slope
@@ -155,11 +184,35 @@ long.dat.22.32 <- as.tbl(long.dat.22.32)
 
 long.dat.22.32.dat <- left_join(long.dat.22.32, dat.22.32.coefs, by = "Lizard")
 
+
+#This plot is not right....the C-S model predicted -ve covariance but this is all positve 
+#pdf("output/fig/ab_32_22reaction.norms.pdf", 10, 6) 
 ggplot(data = long.dat.22.32.dat, aes(y = mr.32, x = mr.22, group = "Lizard")) +
   geom_point(shape = 1, fill = "white", size = 1, color = "black") +
   #geom_abline(aes(intercept = b0, slope = b1, colour = Lizard)) +
-  #stat_smooth(aes(group = Lizard, colour = Lizard), method = "lm", se = FALSE) + 
+  stat_smooth(method = "lm", se = FALSE, colour = "black") + 
+  #geom_text(aes(label = sampling.period), check_overlap = T) + 
   geom_line(aes(group = Lizard, colour = Lizard), stat="smooth", method = "lm", alpha = 0.6) + 
+  labs(y = expression(Metabolic~rate~(CO[2]~min^{-1})~at~32~paste(degree,"C")),
+       x = expression(Metabolic~rate~(CO[2]~min^{-1})~at~22~paste(degree,"C"))) +
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+#dev.off()
+
+#Lets have a look at the raw data
+raw2232.dat <-filter(dat, incb_temp == "32" | incb_temp == "22") %>%select(id, samp_period, z.log.co2pmin, incb_temp) %>% spread(incb_temp, z.log.co2pmin)
+
+names(raw2232.dat) <- c("Lizard", "sampling.period", "mr.22", "mr.32")
+
+#Nope this shows a positive relationsihip too....
+ggplot(data = raw2232.dat, aes(y = mr.32, x = mr.22, group = "Lizard")) +
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") +
+  #geom_abline(aes(intercept = b0, slope = b1, colour = Lizard)) +
+  stat_smooth(method = "lm", se = FALSE, colour = "black") + 
+  #geom_text(aes(label = sampling.period), check_overlap = T) + 
+  #geom_line(aes(group = Lizard, colour = Lizard), stat="smooth", method = "lm", alpha = 0.6) + 
   labs(y = expression(Metabolic~rate~(CO[2]~min^{-1})~at~32~paste(degree,"C")),
        x = expression(Metabolic~rate~(CO[2]~min^{-1})~at~22~paste(degree,"C"))) +
   theme_bw() + 
@@ -169,6 +222,4 @@ ggplot(data = long.dat.22.32.dat, aes(y = mr.32, x = mr.22, group = "Lizard")) +
 
 
 
-
-ab.reaction.norms[ab.reaction.norms$Temperature == "32","pred.mr"]
 
