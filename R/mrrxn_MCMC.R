@@ -529,7 +529,7 @@ m4 <- mclapply(1:3, function(i) {
            verbose = T)
 }, mc.cores = 3)
 } else{
-  m4 <- readRDS("output/rds/m4_v2")
+  m4 <- readRDS("output/rds/m4_sp_t_z")
 }
 
 m4.S <- lapply(m4, function(m) m$Sol)
@@ -551,74 +551,6 @@ plot(m4.V1)
 summary(m4.V1)
 posterior.mode(m4.VCV)
 HPDinterval(as.mcmc(m4.VCV))
-
-#Tabulating the model output using m1 for between ID var and covar
-Table2 <- data.frame(matrix(nrow = 6 , ncol = 6))
-rownames(Table2) <- c(sort(unique(dat$incb_temp)))
-colnames(Table2) <- c(sort(unique(dat$incb_temp)))
-
-#Variances - the diagonal of matrix
-names(posterior.mode(m4.VCV))
-
-Table2[1,1] <- posterior.mode(m4.VCV)["traitt_22:traitt_22.id"]
-Table2[2,2] <- posterior.mode(m4.VCV)["traitt_24:traitt_24.id"]
-Table2[3,3] <- posterior.mode(m4.VCV)["traitt_26:traitt_26.id"]
-Table2[4,4] <- posterior.mode(m4.VCV)["traitt_28:traitt_28.id"]
-Table2[5,5] <- posterior.mode(m4.VCV)["traitt_30:traitt_30.id"]
-Table2[6,6] <- posterior.mode(m4.VCV)["traitt_32:traitt_32.id"]
-
-#Covariance - upper off diagonal of matrix 
-#row of 22 
-Table2[1,2] <- posterior.mode(m4.VCV)["traitt_22:traitt_24.id"]
-Table2[1,3] <- posterior.mode(m4.VCV)["traitt_22:traitt_26.id"]
-Table2[1,4] <- posterior.mode(m4.VCV)["traitt_22:traitt_28.id"]
-Table2[1,5] <- posterior.mode(m4.VCV)["traitt_22:traitt_30.id"]
-Table2[1,6] <- posterior.mode(m4.VCV)["traitt_22:traitt_32.id"]
-
-#row of 24 
-Table2[2,3] <- posterior.mode(m4.VCV)["traitt_24:traitt_26.id"]
-Table2[2,4] <- posterior.mode(m4.VCV)["traitt_24:traitt_28.id"]
-Table2[2,5] <- posterior.mode(m4.VCV)["traitt_24:traitt_30.id"]
-Table2[2,6] <- posterior.mode(m4.VCV)["traitt_24:traitt_32.id"]
-
-#row of 26 
-Table2[3,4] <- posterior.mode(m4.VCV)["traitt_26:traitt_28.id"]
-Table2[3,5] <- posterior.mode(m4.VCV)["traitt_26:traitt_30.id"]
-Table2[3,6] <- posterior.mode(m4.VCV)["traitt_26:traitt_32.id"]
-
-#row of 28 
-Table2[4,5] <- posterior.mode(m4.VCV)["traitt_28:traitt_30.id"]
-Table2[4,6] <- posterior.mode(m4.VCV)["traitt_28:traitt_32.id"]
-
-#row of 30 
-Table2[5,6] <- posterior.mode(m4.VCV)["traitt_30:traitt_32.id"]
-
-#Correlation - lower off diagonal of matrix 
-#col of 22
-Table2[2,1] <- posterior.mode(m4.VCV[,"traitt_22:traitt_24.id"] / (sqrt(m4.VCV[,"traitt_22:traitt_22.id"]) * sqrt(m4.VCV[,"traitt_24:traitt_24.id"]))) 
-Table2[3,1] <- posterior.mode(m4.VCV[,"traitt_22:traitt_26.id"] / (sqrt(m4.VCV[,"traitt_22:traitt_22.id"]) * sqrt(m4.VCV[,"traitt_26:traitt_26.id"]))) 
-Table2[4,1] <- posterior.mode(m4.VCV[,"traitt_22:traitt_28.id"] / (sqrt(m4.VCV[,"traitt_22:traitt_22.id"]) * sqrt(m4.VCV[,"traitt_28:traitt_28.id"]))) 
-Table2[5,1] <- posterior.mode(m4.VCV[,"traitt_22:traitt_30.id"] / (sqrt(m4.VCV[,"traitt_22:traitt_22.id"]) * sqrt(m4.VCV[,"traitt_30:traitt_30.id"])))
-Table2[6,1] <- posterior.mode(m4.VCV[,"traitt_22:traitt_32.id"] / (sqrt(m4.VCV[,"traitt_22:traitt_22.id"]) * sqrt(m4.VCV[,"traitt_32:traitt_32.id"]))) 
-
-#col of 24
-Table2[3,2] <- posterior.mode(m4.VCV[,"traitt_24:traitt_26.id"] / (sqrt(m4.VCV[,"traitt_24:traitt_24.id"]) * sqrt(m4.VCV[,"traitt_26:traitt_26.id"]))) 
-Table2[4,2] <- posterior.mode(m4.VCV[,"traitt_24:traitt_28.id"] / (sqrt(m4.VCV[,"traitt_24:traitt_24.id"]) * sqrt(m4.VCV[,"traitt_28:traitt_28.id"]))) 
-Table2[5,2] <- posterior.mode(m4.VCV[,"traitt_24:traitt_30.id"] / (sqrt(m4.VCV[,"traitt_24:traitt_24.id"]) * sqrt(m4.VCV[,"traitt_30:traitt_30.id"])))
-Table2[6,2] <- posterior.mode(m4.VCV[,"traitt_24:traitt_32.id"] / (sqrt(m4.VCV[,"traitt_24:traitt_24.id"]) * sqrt(m4.VCV[,"traitt_32:traitt_32.id"]))) 
-
-#col of 26
-Table2[4,3] <- posterior.mode(m4.VCV[,"traitt_26:traitt_28.id"] / (sqrt(m4.VCV[,"traitt_26:traitt_26.id"]) * sqrt(m4.VCV[,"traitt_28:traitt_28.id"]))) 
-Table2[5,3] <- posterior.mode(m4.VCV[,"traitt_26:traitt_30.id"] / (sqrt(m4.VCV[,"traitt_26:traitt_26.id"]) * sqrt(m4.VCV[,"traitt_30:traitt_30.id"])))
-Table2[6,3] <- posterior.mode(m4.VCV[,"traitt_26:traitt_32.id"] / (sqrt(m4.VCV[,"traitt_26:traitt_26.id"]) * sqrt(m4.VCV[,"traitt_32:traitt_32.id"]))) 
-
-#col of 28
-Table2[5,4] <- posterior.mode(m4.VCV[,"traitt_28:traitt_30.id"] / (sqrt(m4.VCV[,"traitt_28:traitt_28.id"]) * sqrt(m4.VCV[,"traitt_30:traitt_30.id"])))
-Table2[6,4] <- posterior.mode(m4.VCV[,"traitt_28:traitt_32.id"] / (sqrt(m4.VCV[,"traitt_28:traitt_28.id"]) * sqrt(m4.VCV[,"traitt_32:traitt_32.id"])))
-
-#col of 30
-Table2[6,5] <- posterior.mode(m4.VCV[,"traitt_30:traitt_32.id"] / (sqrt(m4.VCV[,"traitt_30:traitt_30.id"]) * sqrt(m4.VCV[,"traitt_32:traitt_32.id"]))) 
-
 
 ##### Dan's code to construction VCV matrix for Between ID #####
 # B = posterior.mode
