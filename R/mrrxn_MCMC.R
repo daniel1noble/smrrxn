@@ -672,7 +672,9 @@ ggplot(data = melted.between_cor, aes(x = Var1, y = Var2, fill = Correlation)) +
         axis.ticks = element_blank(),
         legend.justification = c(1, 0),
         legend.position = c(0.35, 0.85),
-        legend.direction = "horizontal") 
+        legend.direction = "horizontal") +
+  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+                               title.position = "top", title.hjust = 0.5)) 
 
 #dev.off()
 
@@ -777,7 +779,9 @@ ggplot(data = melted.within_cor, aes(x = Var1, y = Var2, fill = Correlation)) +
         axis.ticks = element_blank(),
         legend.justification = c(1, 0),
         legend.position = c(0.4,0.85),
-        legend.direction = "horizontal") 
+        legend.direction = "horizontal") +
+  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+                               title.position = "top", title.hjust = 0.5))
 
 #dev.off()
 
@@ -825,7 +829,9 @@ ggplot(data = melted.within_cov, aes(x = Var1, y = Var2, fill = Covariance)) +
         axis.ticks = element_blank(),
         legend.justification = c(1, 0),
         legend.position = c(0.4,0.85),
-        legend.direction = "horizontal") 
+        legend.direction = "horizontal") +
+  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+                               title.position = "top", title.hjust = 0.5))
 #dev.off()
 
 #Forest plot of variances
@@ -946,7 +952,7 @@ fig5a <- ggplot(data = forestdat, aes(x = temp, y = Rpt)) +
 fig5b <- ggplot(data = forestdat, aes(x = temp, y = ID_var)) +
   geom_point() + 
   geom_errorbar(aes(ymin = ID_var_l, ymax = ID_var_u), width = 0) +
-  scale_y_continuous(limits = c(0,3.5)) + 
+  scale_y_continuous(limits = c(0,1)) + 
   scale_x_continuous(breaks = x) + 
   labs(y = "Between-individual variance", x = " ") +
   coord_flip() +
