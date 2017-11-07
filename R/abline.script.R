@@ -186,6 +186,7 @@ long.dat.22.32.dat <- left_join(long.dat.22.32, dat.22.32.coefs, by = "Lizard")
 
 
 #This plot is not right....the C-S model predicted -ve covariance but this is all positve 
+#This has been fixed, after accounting for sampling period as a fixed effect!  
 #pdf("output/fig/ab_32_22reaction.norms.pdf", 10, 6) 
 ggplot(data = long.dat.22.32.dat, aes(y = mr.32, x = mr.22, group = "Lizard")) +
   geom_point(shape = 1, fill = "white", size = 1, color = "black") +
@@ -221,5 +222,22 @@ ggplot(data = raw2232.dat, aes(y = mr.32, x = mr.22, group = "Lizard")) +
         panel.grid.minor = element_blank())
 
 
+#Why is there a all round positive correlation? 
+#Is there acclimation or a seasonal effect? 
+#Plot responses over time - 
+#pdf("output/fig/habituation_overtime.pdf", 10, 10) 
+ggplot(data = ab.rn, aes(x = sampling.period, y = pred.mr)) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") +
+  stat_smooth(method = "lm", se = FALSE, colour = "black") + 
+  geom_line(aes(group = Lizard, colour = Lizard), stat="smooth", method = "lm", alpha = 0.6) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)) + 
+  facet_wrap(~Temperature) + 
+  labs(y = expression(Z-transformed~Metabolic~Rate~(CO[2]~min^{-1})),
+       x = "Sampling Period") +
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+#dev.off()
 
 
