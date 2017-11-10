@@ -9,7 +9,7 @@ library(parallel)
 
 #data
 #data <- read.csv("data/data_final/multiresp_wi_t_z.csv")
-data <- read.csv("data/data_final/mrrxn_final_v2.csv")
+data <- read.csv("data/data_final/multiresp.csv")
 data$id <- as.factor(data$id)
 data$series <- as.factor(data$series)
 
