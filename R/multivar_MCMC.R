@@ -8,8 +8,8 @@ library(MCMCglmm)
 library(parallel)
 
 #data
-data <- read.csv("data/data_final/multiresp_wi_t_z.csv")
-#data <- read.csv("data/data_final/mrrxn_final_v2.csv")
+#data <- read.csv("data/data_final/multiresp_wi_t_z.csv")
+data <- read.csv("data/data_final/mrrxn_final_v2.csv")
 data$id <- as.factor(data$id)
 data$series <- as.factor(data$series)
 
@@ -56,7 +56,7 @@ multi.prior <- list(R = list(V = diag(6), nu = 0.01), G = list(G1 = list(V = dia
              verbose = T)
   }, mc.cores = 3)
   
- saveRDS(m4_sp, "R/m4_sp_t_z")
+ saveRDS(m4_sp, "R/m4_sp_noz")
 
 
 
