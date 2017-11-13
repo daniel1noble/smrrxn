@@ -258,6 +258,20 @@ reaction.norms %>%
         panel.grid.minor = element_blank()) + 
   labs(x = expression(paste("Temperature ",degree,"C")), y = expression(Metabolic~rate~(CO[2]~min^{-1})))
 #dev.off()
+reaction.norms %>% 
+  ggplot(aes(x = Temperature, y = posterior.mode, group = Lizard, color = Lizard)) +
+  geom_line(aes(group = Lizard, colour = Lizard), stat="smooth", method = "lm", alpha = 0.6) +
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") +
+  #facet_wrap(~ sampling.period, nrow = 2) + 
+  scale_x_continuous(breaks = c(22, 24, 26, 28, 30, 32)) + 
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text=element_text(size=12),
+        axis.title=element_text(size=14,face="bold")) + 
+  labs(x = expression(paste("Temperature ",degree,"C")), y = expression(Metabolic~rate~(VCO[2]~min^{-1})))
+
 
 #Plotting covariances
 #Individual predictions from m2 for plots
