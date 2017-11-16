@@ -257,21 +257,37 @@ reaction.norms %>%
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank()) + 
   labs(x = expression(paste("Temperature ",degree,"C")), y = expression(Metabolic~rate~(CO[2]~min^{-1})))
-#pdf("output/fig/AES_Fig2.pdf", 9,9)
+pdf("output/fig/AES_Fig1.pdf", 9,9)
 filter(reaction.norms, sampling.period ==5) %>% 
   ggplot(aes(x = Temperature, y = posterior.mode, group = Lizard, color = Lizard)) +
-  #geom_line(aes(group = Lizard, colour = Lizard), stat="smooth", method = "lm", alpha = 0.6, lwd = 1) +
-  geom_point(shape = 1, fill = "white", size = 4) +
+  geom_line(aes(group = Lizard, colour = Lizard), stat="smooth", method = "lm", alpha = 0.6, lwd = 1.5) +
+  geom_point(shape = 1, size = 1, colour = "black") +
   #facet_wrap(~ sampling.period, nrow = 2) + 
   scale_x_continuous(breaks = c(22, 24, 26, 28, 30, 32)) + 
   theme_bw() + 
   theme(legend.position = "none", 
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
-        axis.text=element_text(size=12),
-        axis.title=element_text(size=14,face="bold")) + 
-  labs(x = expression(paste("Temperature ",degree,"C")), y = expression(Metabolic~rate~(VCO[2]~min^{-1})))
-#dev.off()
+        axis.text=element_text(size=20),
+        axis.title=element_text(size=20,face="bold")) + 
+  labs(x = expression(paste("Temperature ",degree,"C")), y = expression(z-transformed~Metabolic~rate~(VCO[2]~min^{-1})))
+dev.off()
+
+pdf("output/fig/AES_Fig2.pdf", 9,9)
+filter(reaction.norms, sampling.period ==5) %>% 
+  ggplot(aes(x = Temperature, y = posterior.mode, group = Lizard, color = Lizard)) +
+  #geom_line(aes(group = Lizard, colour = Lizard), stat="smooth", method = "lm", alpha = 0.6, lwd = 1) +
+  geom_point(shape = 16, size = 4, alpha = 0.6) +
+  #facet_wrap(~ sampling.period, nrow = 2) + 
+  scale_x_continuous(breaks = c(22, 24, 26, 28, 30, 32)) + 
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text=element_text(size=20),
+        axis.title=element_text(size=20,face="bold")) + 
+  labs(x = expression(paste("Temperature ",degree,"C")), y = expression(z-transformed~Metabolic~rate~(VCO[2]~min^{-1})))
+dev.off()
 
 #Plotting covariances
 #Individual predictions from m2 for plots
@@ -337,6 +353,20 @@ names(cor.int.slop)
 
 cor.int.slop2 <- left_join(cor.int.slop, series.mass)
 str(cor.int.slop2)
+
+slopes <- filter(cor.int.slop, sampling.period == '5') %>% select(Ind.slope, Series.slope) %>% mutate(Slope = Ind.slope + Series.slope) %>% data.frame()
+  
+ggplot(data = slopes, aes(Slope_rounded)) + 
+  stat_density(geom = "line") + 
+  stat_bin(bins = 20, binwidth = 0.03, alpha = 0.6) +
+  theme_bw() +
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text=element_text(size=20),
+        axis.title=element_text(size=20,face="bold")) + 
+  labs(x = "Individual slopes", y = "Frequency")
 
 #Plotting ints with slopes
 
@@ -544,7 +574,7 @@ m4 <- mclapply(1:3, function(i) {
            verbose = T)
 }, mc.cores = 3)
 } else{
-  m4 <- readRDS("output/rds/m4_sp_t_z")
+  m4 <- readRDS("output/rds/m4_sp_noz")
 }
 
 m4.S <- lapply(m4, function(m) m$Sol)
@@ -586,7 +616,7 @@ mat <-posterior.mode(m4.VCV)
 loctions3 <- grep("id", names(mat))
 B <- mat[loctions3]
 
-cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))
+cor_cov_matrices(B = B, names = c(sort(unique(data$incb_temp))))
 
 #Between individual correlations - posterior modes
 write.csv(cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))$cor, "output/table/betweenID_correlations.csv")
@@ -638,6 +668,36 @@ write.csv(cor_cov_matrices(B = upper_W, names = c(sort(unique(dat$incb_temp))))$
 #################################################################
 #Graphing BETWEEN individual correlation matrix (posterior mode)#
 #################################################################
+#Because the matrix is no postive definitive... lets hand calculate this shit 
+#Cor(x,y) = cov(x,y)/(sd(x) * sd(y))
+#Need to use covariance matrix 
+
+between.cov <- cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))$cov
+between.cor <- matrix(nrow = 6, ncol = 6)
+row.names(between.cor) <- x
+colnames(between.cor) <- x
+
+#diagonals = 1 
+diag(between.cor) <- rep(1, 6)
+
+#22, 24
+between.cor[2, 1] <- between.cov[2,1] / (sqrt(between.cov[1,1])*sqrt(between.cov[2,2]))
+
+#22, 26
+between.cor[3, 1] <- between.cov[3,1] / (sqrt(between.cov[1,1])*sqrt(between.cov[3,3]))
+
+#22, 28
+between.cor[4, 1] <- between.cov[4,1] / (sqrt(between.cov[1,1])*sqrt(between.cov[4,4]))
+
+#22, 30
+between.cor[5, 1] <- between.cov[5,1] / (sqrt(between.cov[1,1])*sqrt(between.cov[5,5]))
+
+#22, 32
+between.cor[6, 1] <- between.cov[6,1] / (sqrt(between.cov[1,1])*sqrt(between.cov[6,6]))
+
+
+
+
 
 #posterior mode
 bw.cor <- cor_cov_matrices(B = B, names = c(sort(unique(dat$incb_temp))))$cor
@@ -849,14 +909,6 @@ ggplot(data = melted.within_cov, aes(x = Var1, y = Var2, fill = Covariance)) +
 #dev.off()
 
 #Forest plot of variances
-
-#Tabulating the model output using m1 for within ID var and covar
-mat <-posterior.mode(m4.VCV)
-loctions3 <- grep("units", names(mat))
-B2 <- mat[loctions3]
-
-cor_cov_matrices(B = B2, names = c(sort(unique(dat$incb_temp))))
-
 #Temperature specfic repeatability
 Table3 <- data.frame(matrix(nrow = 6 , ncol = 3))
 rownames(Table3) <- c(sort(unique(dat$incb_temp)))
@@ -966,7 +1018,7 @@ fig5a <- ggplot(data = forestdat, aes(x = temp, y = Rpt)) +
 fig5b <- ggplot(data = forestdat, aes(x = temp, y = ID_var)) +
   geom_point() + 
   geom_errorbar(aes(ymin = ID_var_l, ymax = ID_var_u), width = 0) +
-  scale_y_continuous(limits = c(0,1)) + 
+  #scale_y_continuous(limits = c(0,1)) + 
   scale_x_continuous(breaks = x) + 
   labs(y = "Between-individual variance", x = " ") +
   coord_flip() +
@@ -978,7 +1030,7 @@ fig5b <- ggplot(data = forestdat, aes(x = temp, y = ID_var)) +
 fig5c <- ggplot(data = forestdat, aes(x = temp, y = E_var)) +
   geom_point() + 
   geom_errorbar(aes(ymin = E_var_l, ymax = E_var_u), width = 0) +
-  scale_y_continuous(limits = c(0,1)) + 
+  #scale_y_continuous(limits = c(0,1)) + 
   scale_x_continuous(breaks = x) + 
   labs(y = "Within-individual variance", x = " ") +
   coord_flip() +
