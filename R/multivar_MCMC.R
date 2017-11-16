@@ -8,8 +8,7 @@ library(MCMCglmm)
 library(parallel)
 
 #data
-#data <- read.csv("data/data_final/multiresp_wi_t_z.csv")
-data <- read.csv("data/data_final/multiresp.csv")
+data <- read.csv("data/data_final/multiresp_log.csv")
 data$id <- as.factor(data$id)
 data$series <- as.factor(data$series)
 
@@ -19,25 +18,19 @@ data$series <- as.factor(data$series)
 #data <- data[incl.vars]
 
 #data3 <- data %>% 
-  #select(id, samp_period, series, incb_temp, orig_co2_pmin, orig_lizmass) %>%
+  #select(id, samp_period, series, incb_temp, log.co2pmin, orig_lizmass) %>%
   #group_by(series) %>%
   #mutate(avg_mass = mean(orig_lizmass)) %>%
-  #select(id, samp_period, series, incb_temp, orig_co2_pmin, avg_mass) %>%
-  #spread(incb_temp, orig_co2_pmin) 
+  #select(id, samp_period, series, incb_temp, log.co2pmin, avg_mass) %>%
+  #spread(incb_temp, log.co2pmin) 
   
 #colnames(data3)[5:10] <- paste0("t_", colnames(data3)[5:10])
 
 #data3$z.log.mass <- scale(log(data3$avg_mass))
-#data3$t_22 <- scale(log(data3$t_22))
-#data3$t_24 <- scale(log(data3$t_24))
-#data3$t_26 <- scale(log(data3$t_26))
-#data3$t_28 <- scale(log(data3$t_28))
-#data3$t_30 <- scale(log(data3$t_30))
-#data3$t_32 <- scale(log(data3$t_32))
 
 #data3 <- as.data.frame(data3)
-#data4 <- data3[!is.na(data3$z.log.mass),]
-#write.csv(data4, row.names = F, "data/data_final/multiresp_wi_t_z.csv")
+#data3 <- data3[!is.na(data3$z.log.mass),]
+#write.csv(data3, row.names = F, "data/data_final/multiresp_log.csv")
 
 #priors
 multi.prior <- list(R = list(V = diag(6), nu = 0.01), G = list(G1 = list(V = diag(6), nu = 0.01)))
