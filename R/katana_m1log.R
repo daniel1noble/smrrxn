@@ -47,3 +47,9 @@ m1.log <- mclapply(1:3, function(i) {
 
 saveRDS(m1.log, "R/m1.log")
 
+
+## Asreml
+
+#mod <- asreml(log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2, random=~str(~id + inverseK_incb_temp:id, ~us(2, c(1,0.1,1)):id(42)) + str(~series + inverseK_incb_temp:series, ~us(2, c(1,0.1,1)):series(420)), data = dat, maxiter = 20)
+
+#mod <- asreml(log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2, random=~str(~series + inverseK_incb_temp:series, ~us(2, c(1,0.1,1)):series(420)), data = dat, maxiter = 20)
