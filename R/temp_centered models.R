@@ -92,10 +92,10 @@ TableRslope[1,7] <- posterior.mode(m1_t22.VCV[,"inverseK_incb_temp_22cen:inverse
 TableRslope[1,8:9] <- HPDinterval(as.mcmc(m1_t22.VCV[,"inverseK_incb_temp_22cen:inverseK_incb_temp_22cen.series"]))
 
 ##Covariance/Correlation of intercept and slope ID level
-
 m1_t22.id.cor <- m1_t22.VCV[,"inverseK_incb_temp_22cen:(Intercept).id"] / ( sqrt(m1_t22.VCV[,"(Intercept):(Intercept).id"]) * sqrt(m1_t22.VCV[,"inverseK_incb_temp_22cen:inverseK_incb_temp_22cen.id"]) )
-posterior.mode(m1_t22_cor)
-HPDinterval(as.mcmc(m1_t22_cor))
+
+TableIntSlopeCovCor[1,4] <- posterior.mode(m1_t22.id.cor)
+TableIntSlopeCovCor[1,5:6] <-HPDinterval(as.mcmc(m1_t22.id.cor))
 
 ##Covariance/Correlation of intercept and slope series level
 
@@ -157,10 +157,9 @@ TableRslope[2,7] <- posterior.mode(m1_t24.VCV[,"inverseK_incb_temp_24cen:inverse
 TableRslope[2,8:9] <- HPDinterval(as.mcmc(m1_t24.VCV[,"inverseK_incb_temp_24cen:inverseK_incb_temp_24cen.series"]))
 
 ##Covariance/Correlation of intercept and slope ID level
-
 m1_t24.id.cor <- m1_t24.VCV[,"inverseK_incb_temp_24cen:(Intercept).id"] / ( sqrt(m1_t24.VCV[,"(Intercept):(Intercept).id"]) * sqrt(m1_t24.VCV[,"inverseK_incb_temp_24cen:inverseK_incb_temp_24cen.id"]) )
-posterior.mode(m1_t24_cor)
-HPDinterval(as.mcmc(m1_t24_cor))
+TableIntSlopeCovCor[2,4] <- posterior.mode(m1_t24.id.cor)
+TableIntSlopeCovCor[2,5:6] <- HPDinterval(as.mcmc(m1_t24.id.cor))
 
 ##Covariance/Correlation of intercept and slope series level
 
@@ -224,8 +223,8 @@ TableRslope[3,8:9] <- HPDinterval(as.mcmc(m1_t26.VCV[,"inverseK_incb_temp_26cen:
 ##Covariance/Correlation of intercept and slope ID level
 
 m1_t26.id.cor <- m1_t26.VCV[,"inverseK_incb_temp_26cen:(Intercept).id"] / ( sqrt(m1_t26.VCV[,"(Intercept):(Intercept).id"]) * sqrt(m1_t26.VCV[,"inverseK_incb_temp_26cen:inverseK_incb_temp_26cen.id"]) )
-posterior.mode(m1_t26_cor)
-HPDinterval(as.mcmc(m1_t26_cor))
+TableIntSlopeCovCor[3,4] <- posterior.mode(m1_t26.id.cor)
+TableIntSlopeCovCor[3,5:6] <-HPDinterval(as.mcmc(m1_t26.id.cor))
 
 ##Covariance/Correlation of intercept and slope series level
 
@@ -289,8 +288,8 @@ TableRslope[4,8:9] <- HPDinterval(as.mcmc(m1_t28.VCV[,"inverseK_incb_temp_28cen:
 ##Covariance/Correlation of intercept and slope ID level
 
 m1_t28.id.cor <- m1_t28.VCV[,"inverseK_incb_temp_28cen:(Intercept).id"] / ( sqrt(m1_t28.VCV[,"(Intercept):(Intercept).id"]) * sqrt(m1_t28.VCV[,"inverseK_incb_temp_28cen:inverseK_incb_temp_28cen.id"]) )
-posterior.mode(m1_t28_cor)
-HPDinterval(as.mcmc(m1_t28_cor))
+TableIntSlopeCovCor[4,4] <- posterior.mode(m1_t28.id.cor)
+TableIntSlopeCovCor[4,5:6] <- HPDinterval(as.mcmc(m1_t28.id.cor))
 
 ##Covariance/Correlation of intercept and slope series level
 
@@ -354,8 +353,8 @@ TableRslope[5,8:9] <- HPDinterval(as.mcmc(m1_t30.VCV[,"inverseK_incb_temp_30cen:
 ##Covariance/Correlation of intercept and slope ID level
 
 m1_t30.id.cor <- m1_t30.VCV[,"inverseK_incb_temp_30cen:(Intercept).id"] / ( sqrt(m1_t30.VCV[,"(Intercept):(Intercept).id"]) * sqrt(m1_t30.VCV[,"inverseK_incb_temp_30cen:inverseK_incb_temp_30cen.id"]) )
-posterior.mode(m1_t30_cor)
-HPDinterval(as.mcmc(m1_t30_cor))
+TableIntSlopeCovCor[5,4] <- posterior.mode(m1_t30.id.cor)
+TableIntSlopeCovCor[5,5:6] <- HPDinterval(as.mcmc(m1_t30.id.cor))
 
 ##Covariance/Correlation of intercept and slope series level
 
@@ -431,8 +430,8 @@ HPDinterval(as.mcmc(m1_t32_cor))
 ##Covariance/Correlation of intercept and slope series level
 
 m1_t32.series.cor <- m1_t32.VCV[,"inverseK_incb_temp_32cen:(Intercept).series"] / ( sqrt(m1_t32.VCV[,"(Intercept):(Intercept).series"]) * sqrt(m1_t32.VCV[,"inverseK_incb_temp_32cen:inverseK_incb_temp_32cen.series"]) )
-posterior.mode(m1_t32.series.cor)
-HPDinterval(as.mcmc(m1_t32.series.cor))
+TableIntSlopeCovCor[6,4] <- posterior.mode(m1_t32.series.cor)
+TableIntSlopeCovCor[6,5:6] <- HPDinterval(as.mcmc(m1_t32.series.cor))
 
 posterior.mode(m1_t32.series.cor) #R.int
 HPDinterval(as.mcmc(m1_t32.series.cor)) #R.int CIs
