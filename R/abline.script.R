@@ -245,11 +245,26 @@ ggplot(data = ab.rn, aes(x = sampling.period, y = pred.mr)) +
 long.dat <- select(ab.rn, Temperature, Lizard, sampling.period, pred.mr, series) %>% spread(Temperature, pred.mr)
 names(long.dat)[4:9] <- paste0("pred.",names(long.dat)[4:9])
 
+long.dat.raw <- select(dat, incb_temp, id, samp_period, log.co2pmin, series) %>% spread(incb_temp, log.co2pmin)
+names(long.dat.raw)[4:9] <- paste0("log.",names(long.dat.raw)[4:9])
+
+
 #22-24
 fig.22.24 <- ggplot(data = long.dat, aes(x = pred.22, y = pred.24)) + 
   geom_point(shape = 1, fill = "white", size = 1, color = "black") +
   stat_smooth(method = "lm", se = FALSE, colour = "black") + 
   geom_line(aes(group = Lizard, colour = Lizard), stat="smooth", method = "lm", alpha = 0.6) +
+  labs(y = expression(MR~at~24~paste(degree,"C")),
+       x = expression(MR~at~22~paste(degree,"C"))) +
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+
+ggplot(data = long.dat.raw, aes(x = log.22, y = log.24)) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") +
+  stat_smooth(method = "lm", se = FALSE, colour = "black") + 
+  geom_line(aes(group = id, colour = id), stat="smooth", method = "lm", alpha = 0.6) +
   labs(y = expression(MR~at~24~paste(degree,"C")),
        x = expression(MR~at~22~paste(degree,"C"))) +
   theme_bw() + 
@@ -269,6 +284,17 @@ fig.22.26 <- ggplot(data = long.dat, aes(x = pred.22, y = pred.26)) +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank())
 
+ggplot(data = long.dat.raw, aes(x = log.22, y = log.26)) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") +
+  stat_smooth(method = "lm", se = FALSE, colour = "black") + 
+  geom_line(aes(group = id, colour = id), stat="smooth", method = "lm", alpha = 0.6) +
+  labs(y = expression(MR~at~26~paste(degree,"C")),
+       x = expression(MR~at~22~paste(degree,"C"))) +
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+
 #22-28
 fig.22.28 <- ggplot(data = long.dat, aes(x = pred.22, y = pred.28)) + 
   geom_point(shape = 1, fill = "white", size = 1, color = "black") +
@@ -281,11 +307,34 @@ fig.22.28 <- ggplot(data = long.dat, aes(x = pred.22, y = pred.28)) +
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank())
 
+ggplot(data = long.dat.raw, aes(x = log.22, y = log.28)) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") +
+  stat_smooth(method = "lm", se = FALSE, colour = "black") + 
+  geom_line(aes(group = id, colour = id), stat="smooth", method = "lm", alpha = 0.6) +
+  labs(y = expression(MR~at~28~paste(degree,"C")),
+       x = expression(MR~at~22~paste(degree,"C"))) +
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+
+
 #22-30
 fig.22.30 <- ggplot(data = long.dat, aes(x = pred.22, y = pred.30)) + 
   geom_point(shape = 1, fill = "white", size = 1, color = "black") +
   stat_smooth(method = "lm", se = FALSE, colour = "black") + 
   geom_line(aes(group = Lizard, colour = Lizard), stat="smooth", method = "lm", alpha = 0.6) +
+  labs(y = expression(MR~at~30~paste(degree,"C")),
+       x = expression(MR~at~22~paste(degree,"C"))) +
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+
+ggplot(data = long.dat.raw, aes(x = log.22, y = log.30)) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") +
+  stat_smooth(method = "lm", se = FALSE, colour = "black") + 
+  geom_line(aes(group = id, colour = id), stat="smooth", method = "lm", alpha = 0.6) +
   labs(y = expression(MR~at~30~paste(degree,"C")),
        x = expression(MR~at~22~paste(degree,"C"))) +
   theme_bw() + 
@@ -304,6 +353,18 @@ fig.22.32 <- ggplot(data = long.dat, aes(x = pred.22, y = pred.32)) +
   theme(legend.position = "none", 
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank())
+
+ggplot(data = long.dat.raw, aes(x = log.22, y = log.32)) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") +
+  stat_smooth(method = "lm", se = FALSE, colour = "black") + 
+  geom_line(aes(group = id, colour = id), stat="smooth", method = "lm", alpha = 0.6) +
+  labs(y = expression(MR~at~32~paste(degree,"C")),
+       x = expression(MR~at~22~paste(degree,"C"))) +
+  theme_bw() + 
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+
 
 #pdf("output/fig/fig22.pdf", 20, 4)
 multiplot(fig.22.24, fig.22.26, fig.22.28, fig.22.30, fig.22.32, cols = 5)
