@@ -54,7 +54,7 @@ if(m1){
              verbose = T)
   }, mc.cores = 3)
 }else{
-m1 <- readRDS("output/rds/m1")
+m1 <- readRDS("output/rds/m1.log")
 }
 
 #Calculating repeatabilities using m1
@@ -574,7 +574,7 @@ m4 <- mclapply(1:3, function(i) {
            verbose = T)
 }, mc.cores = 3)
 } else{
-  m4 <- readRDS("output/rds/m4_sp_noz")
+  m4 <- readRDS("output/rds/m4_sp_log")
 }
 
 m4.S <- lapply(m4, function(m) m$Sol)
@@ -1004,15 +1004,17 @@ forestdat$temp <- x
 
 #plotting this out
 fig5a <- ggplot(data = forestdat, aes(x = temp, y = Rpt)) +
-  geom_point() + 
+  geom_point(size = 4) + 
   geom_errorbar(aes(ymin = Rpt_l, ymax = Rpt_u), width = 0) +
   scale_y_continuous(limits = c(0,1)) + 
   scale_x_continuous(breaks = x) + 
-  labs(y = "Repeatability", x = "Temperature") +
+  labs(y = "Repeatability", x = expression(paste("Temperature ",degree,"C"))) +
   coord_flip() +
   theme_bw() +
   theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank()) 
+        panel.grid.minor = element_blank(),
+        axis.text=element_text(size=20),
+        axis.title=element_text(size=20,face="bold"))
 
 #Between ID
 fig5b <- ggplot(data = forestdat, aes(x = temp, y = ID_var)) +
