@@ -49,7 +49,7 @@ multi.prior <- list(R = list(V = diag(6), nu = 0.01), G = list(G1 = list(V = dia
              verbose = T)
   }, mc.cores = 3)
   
- saveRDS(m4_sp, "R/m4.log_sp_mass_priortemp")
+ saveRDS(m4_sp, "R/m4.log_sp_idhunits")
 
 
 
