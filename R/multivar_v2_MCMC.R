@@ -39,7 +39,7 @@ multi.prior <- list(R = list(V = diag(6), nu = 0.01), G = list(G1 = list(V = dia
 m4_sp <- mclapply(1:3, function(i) {
   MCMCglmm(cbind(t_22, t_24, t_26, t_28, t_30, t_32) ~  trait - 1 + trait:z.log.mass + trait:samp_period,
            random= ~us(trait):id,
-           rcov = ~idh(trait):units,
+           rcov = ~us(trait):units,
            family = c(rep("gaussian", 6)),
            prior = multi.prior,
            nitt = 7510000,
@@ -49,7 +49,7 @@ m4_sp <- mclapply(1:3, function(i) {
            verbose = T)
 }, mc.cores = 3)
 
-saveRDS(m4_sp, "R/m4.log_sp_mass_priortemp.idhunits")
+saveRDS(m4_sp, "R/m4.log_sp_mass_priortemp.usunits")
 
 
 
