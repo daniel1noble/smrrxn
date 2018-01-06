@@ -14,18 +14,21 @@ expanded.prior <- list(R = list(V = 1, nu = 0.002),
                                 G2 = list(V = diag(2), nu = 0.002, alpha.V = diag(1000,2,2), alpha.mu = rep(0,2))))
 
 #22 centered
-  m1log_t22 <- mclapply(1:3, function(i) {
-    MCMCglmm(log.co2pmin ~ inverseK_incb_temp_22cen + z.log.mass,
-             random = ~us(1+inverseK_incb_temp_22cen):id + us(1+inverseK_incb_temp_22cen):series,
-             family = "gaussian",
-             prior = expanded.prior,
-             nitt = 7510000,
-             burnin = 10000,
-             thin = 5000,
-             data = data, 
-             verbose = T)
-  }, mc.cores = 3)
+m1log_t22 <- mclapply(1:3, function(i) {
+  MCMCglmm(log.co2pmin ~ inverseK_incb_temp_22cen + z.log.mass,
+           random = ~us(1+inverseK_incb_temp_22cen):id + us(1+inverseK_incb_temp_22cen):series,
+           family = "gaussian",
+           prior = expanded.prior,
+           nitt = 7510000,
+           burnin = 10000,
+           thin = 5000,
+           data = dat, 
+           verbose = T)
+}, mc.cores = 3)
   
   saveRDS(m1log_t22, "R/m1log_t22")
+  
 
+
+  
 
