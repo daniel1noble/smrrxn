@@ -44,7 +44,7 @@ m1.log.no.prior <- mclapply(1:3, function(i) {
            verbose = T)
 }, mc.cores = 3)
 
-saveRDS(m1.log, "R/m1.log.no.prior")
+saveRDS(m1.log.no.prior, "R/m1.log.no.prior")
 
 
 
