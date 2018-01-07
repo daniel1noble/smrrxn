@@ -22,7 +22,7 @@ m1log_t22 <- mclapply(1:3, function(i) {
            nitt = 7510000,
            burnin = 10000,
            thin = 5000,
-           data = dat, 
+           data = data, 
            verbose = T)
 }, mc.cores = 3)
   
