@@ -34,7 +34,7 @@ expanded.prior <- list(R = list(V = 1, nu = 0.002),
 #m2.log
 
 m2.log <- mclapply(1:3, function(i) {
-  MCMCglmm(log.co2pmin ~ inverseK_incb_temp + z.log.mass + inverseK_prior_temp2,
+  MCMCglmm(log.co2pmin ~ inverseK_incb_temp + z.log.mass,
            random = ~us(1+inverseK_incb_temp):id + us(1+inverseK_incb_temp):series,
            family = "gaussian",
            prior = expanded.prior,
@@ -46,5 +46,5 @@ m2.log <- mclapply(1:3, function(i) {
            verbose = T)
 }, mc.cores = 3)
   
-saveRDS(m2.log, "R/m2.log")
+saveRDS(m2.log, "R/m1.log.blup.nopriorT")
 
