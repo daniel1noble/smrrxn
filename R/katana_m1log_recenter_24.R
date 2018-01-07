@@ -19,9 +19,9 @@ expanded.prior <- list(R = list(V = 1, nu = 0.002),
              random = ~us(1+inverseK_incb_temp_24cen):id + us(1+inverseK_incb_temp_24cen):series,
              family = "gaussian",
              prior = expanded.prior,
-             nitt = 7510000,
-             burnin = 10000,
-             thin = 5000,
+             nitt = 75100,
+             burnin = 100,
+             thin = 50,
              data = data, 
              verbose = T)
   }, mc.cores = 3)
