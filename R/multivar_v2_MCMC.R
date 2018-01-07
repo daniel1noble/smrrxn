@@ -49,7 +49,7 @@ m4_sp <- mclapply(1:3, function(i) {
            verbose = T)
 }, mc.cores = 3)
 
-saveRDS(m4_sp, "R/m4.log_sp_mass_priortemp.usunits")
+saveRDS(m4_sp, "R/m4.interaction.usall")
 
 
 
