@@ -36,7 +36,7 @@ data$series <- as.factor(data$series)
 multi.prior <- list(R = list(V = diag(6), nu = 0.01), G = list(G1 = list(V = diag(6), nu = 0.01)))
 
 #m4
- m4_sp <- mclapply(1:3, function(i) {
+ m4 <- mclapply(1:3, function(i) {
   MCMCglmm(cbind(t_22, t_24, t_26, t_28, t_30, t_32) ~  z.log.mass + samp_period,
              random= ~us(trait):id,
              rcov = ~idh(trait):units,
@@ -49,7 +49,7 @@ multi.prior <- list(R = list(V = diag(6), nu = 0.01), G = list(G1 = list(V = dia
              verbose = T)
   }, mc.cores = 3)
   
- saveRDS(m4_sp, "R/m4.log_sp_idhunits")
+ saveRDS(m4, "R/m4.log_usall")
 
 
 
