@@ -25,6 +25,6 @@ expanded.prior <- list(R = list(V = 1, nu = 0.002),
              data = data, 
              verbose = T)
   }, mc.cores = 3)
-  saveRDS(m1log_t26, "R/m1log_t26"
+  saveRDS(m1log_t26, "R/m1log_t26")
 
 
