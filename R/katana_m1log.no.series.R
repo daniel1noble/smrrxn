@@ -33,7 +33,7 @@ expanded.prior <- list(R = list(V = 1, nu = 0.002),
 
 #m1.log.noprior - removes prior temp and series
 m1.log.noprior.noseries <- mclapply(1:3, function(i) {
-  MCMCglmm(log.co2pmin ~ inverseK_incb_temp + z.log.mass,
+  MCMCglmm(log.co2pmin ~ inverseK_incb_temp + z.log.mass + samp_period,
           random = ~us(1+inverseK_incb_temp):id,
           family = "gaussian",
           prior = expanded.prior,
