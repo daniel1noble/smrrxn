@@ -303,6 +303,7 @@ newdata$co2pm_nocombout<- as.numeric(newdata$co2pm_nocombout)
 
 newdata$z.incb_temp <- scale(newdata$incb_temp)
 newdata$z.log.temp <- scale(log(newdata$incb_temp))
+newdata$log.temp <- log(newdata$incb_temp)
 
 newdata$z.body_temp <- scale(newdata$body_temp)
 newdata$z.log.body_temp <- scale(log(newdata$body_temp))
@@ -325,9 +326,11 @@ newdata$inverseK_body_temp <- 1 / 8.62e-5 * ((1 / mean(newdata$body_temp_K, na.r
 
 newdata$z.prior_temp1 <- scale(newdata$prior_temp1)
 newdata$z.log.prior_temp1 <- scale(log(newdata$prior_temp1))
+newdata$log.prior_temp1 <- log(newdata$prior_temp1)
 
 newdata$z.prior_temp2 <- scale(newdata$prior_temp2)
 newdata$z.log.prior_temp2 <- scale(log(newdata$prior_temp2))
+newdata$log.prior_temp2 <-log(newdata$prior_temp2)
 
 #prior_temp 1
 newdata$prior_temp1_K <- newdata$prior_temp1 + 273.15
@@ -338,7 +341,7 @@ newdata$prior_temp2_K <- newdata$prior_temp2 + 273.15
 newdata$inverseK_prior_temp2 <- 1 / 8.62e-5 * ((1 / mean(newdata$prior_temp2_K, na.rm =T)) - (1 /newdata$prior_temp2_K))
 
 View(newdata)
-write.csv(newdata, row.names = F, "data/data_final/mrrxn_final_v2.csv")
+write.csv(newdata, row.names = F, "data/data_final/mrrxn_logT.csv")
 
 plot(z.log.co2pmin~z.log.mass, data =newdata, ylim = c(-3,3))
 
