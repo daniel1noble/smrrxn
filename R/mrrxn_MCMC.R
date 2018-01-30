@@ -149,7 +149,7 @@ if(m2){
              verbose = T)
   }, mc.cores = 3)
 }else{
-  m2 <- readRDS("output/rds/m2")
+  m2 <- readRDS("output/rds/archive/m2.log")
 }
 
 m2.S <- lapply(m2, function(m) m$Sol)
@@ -212,11 +212,11 @@ mean.prior.temp <- mean(dat$inverseK_prior_temp2, na.rm = T)
 incubation.temperatures <- unique(dat$inverseK_incb_temp)
 
 #and the 42 lizard names
-lizard.names <- data$id %>% as.character %>% unique %>% sort
+lizard.names <- dat$id %>% as.character %>% unique %>% sort
 
-#output <- do.call("rbind", lapply(1:10, function(i){
-  #do.call("rbind", lapply(lizard.names, get.predictions, post=cbind(m2.Sol, m2.VCV), sampling.period = i)) %>% mutate(sampling.period = i) %>% arrange(Temperature, predicted) %>% mutate(Lizard = factor(Lizard, levels = unique(Lizard)))
-#}))
+output <- do.call("rbind", lapply(1:10, function(i){
+  do.call("rbind", lapply(lizard.names, get.predictions, post=cbind(m2.Sol, m2.VCV), sampling.period = i)) %>% mutate(sampling.period = i) %>% arrange(Temperature, predicted) %>% mutate(Lizard = factor(Lizard, levels = unique(Lizard)))
+}))
 
 #saveRDS(output, "output/id.rxnnorm.preds")
 output <- readRDS("output/id.rxnnorm.preds")
