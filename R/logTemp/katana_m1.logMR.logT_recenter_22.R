@@ -23,10 +23,10 @@ m1.logMR.logT.npT.t22 <- mclapply(1:3, function(i) {
            random = ~us(1+log.temp_22cen):id + us(1+log.temp_22cen):series,
            family = "gaussian",
            prior = expanded.prior,
-           nitt = 7510,
-           burnin = 10,
-           thin = 5,
-           data = , 
+           nitt = 7510000,
+           burnin = 10000,
+           thin = 5000,
+           data = data, 
            verbose = T)
 }, mc.cores = 3)
   
