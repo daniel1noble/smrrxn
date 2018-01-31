@@ -8,6 +8,10 @@ data <- read.csv("data/data_final/mr_final_log.T_recentered.csv")
 data$id <- as.factor(data$id)
 data$series <- as.factor(data$series)
 
+predictors <- c("log.temp_32cen", "z.log.mass", "id", "series")
+
+data <- data[complete.cases(data[,predictors]),]
+
 #priors
 expanded.prior <- list(R = list(V = 1, nu = 0.002),
                        G = list(G1 = list(V = diag(2), nu = 0.002, alpha.V = diag(1000,2,2), alpha.mu = rep(0,2)),
