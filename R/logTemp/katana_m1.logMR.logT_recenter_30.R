@@ -8,7 +8,7 @@ data <- read.csv("data/data_final/mr_final_log.T_recentered.csv")
 data$id <- as.factor(data$id)
 data$series <- as.factor(data$series)
 
-predictors <- c("log.temp_30cen", "z.log.mass", "id", "series")
+predictors <- c("log.temp_30cen", "z.log.mass", "id", "series", "log.prior_temp1")
 
 data <- data[complete.cases(data[,predictors]),]
 
@@ -20,8 +20,8 @@ expanded.prior <- list(R = list(V = 1, nu = 0.002),
 
 
 #30 centered
-m1.logMR.logT.npT.t30 <- mclapply(1:3, function(i) {
-    MCMCglmm(log.co2pmin ~ log.temp_30cen + z.log.mass,
+m1.logMR.logT.t30 <- mclapply(1:3, function(i) {
+    MCMCglmm(log.co2pmin ~ log.temp_30cen + z.log.mass + log.prior_temp1,
              random = ~us(1+log.temp_30cen):id + us(1+log.temp_30cen):series,
              family = "gaussian",
              prior = expanded.prior,
@@ -31,6 +31,6 @@ m1.logMR.logT.npT.t30 <- mclapply(1:3, function(i) {
              data = data, 
              verbose = T)
   }, mc.cores = 3)
-  saveRDS(m1.logMR.logT.npT.t30, "R/m1.logMR.logT.npT.t30")
+  saveRDS(m1.logMR.logT.t30, "R/m1.logMR.logT.t30")
 
 
