@@ -1,0 +1,339 @@
+---
+title: "Code for analyses presented in the electronic supplementary materials"
+author: "Fonti Kar"
+date: "07/12/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, include = T)
+rm(list=ls())
+sessionInfo()
+#R version 3.4.2 (2017-09-28)
+#Platform: x86_64-apple-darwin15.6.0 (64-bit)
+#Running under: macOS High Sierra 10.13.6
+
+packages.need <- c("ggplot2", "GGally", "tidyverse", "magrittr", "brms", "dplyr")
+lapply(packages.need, require, character.only = TRUE)
+```
+
+The code below tests for:
+a) whether metabolic rate and body mass differs between individuals that were randomly assigned into two measurement blocks (1 and 2); 
+b) whether previous temperature experience is an important covariate in predicting metabolic rate (i.e. is there carry over effect)
+c) whether there are strong correlations between any of our predictor variables (i.e collinearity)
+d) comparing mass-scaling exponents from a hierarchical model vs. a typicalmetabolic scaling model
+e) does metabolic rate and body mass change over time (due to habituation) 
+
+### Read in data
+```{r read in data}
+data <- read.csv("data/RMDS/Long_data_for_analysis.csv")
+str(data)
+dim(data)
+```
+
+### a) Does metabolic rate and body mass differs between individuals that were randomly assigned into two measurement blocks (1 and 2)
+```{r batch diff}
+#Lets have a visual inspection first
+ggplot(data, aes(y = log.mass, x = factor(batch))) + 
+  geom_boxplot()
+
+#This doesn't look bad, except for maybe some mass outliers in batch 1 I need to deal with
+
+ggplot(data, aes(y = log.co2pmin, x = factor(batch))) + 
+  geom_boxplot()
+
+#This doesn't look bad either!
+#How about the relationship between the mass and VCO2? 
+
+ggplot(data, aes(y = log.co2pmin, x = log.mass)) + 
+  geom_point() + 
+  geom_smooth(method = lm) +
+  facet_wrap(~factor(batch))
+
+#Doesn't look too diff! Lets test this with a linear mixed model
+#Model structure: logVCO2 ~ logmass + logtemp + batch + (1|ID) + (1|samp_period)
+
+moda.1 <- brm(log.co2pmin ~ log.mass + log.temp + factor(batch) + (1|id) + (1|samp_period), data = data)
+
+plot(moda.1)
+hist(resid(moda.1))
+summary(moda.1) #Estimate for batch is not siginficantly different from zero, safe to say there are no differs in metabolic rate with all else held equal, therefore batch ID will not be included in any subsequent models
+```
+
+### b) whether previous temperature experience is an important covariate in predicting metabolic rate (i.e. is there carry over effect)
+
+To these whether previous temperature experience (i.e. prior_temp) is important in explaining variation in VCO2, we ran a model with prior_temp and another model without prior_temp and compared model fits using information criterions (wAIC, loo values)
+
+Model structure: logVCO2 ~ logmass + logtemp + log.priortemp + (1|ID) + (1|samp_period)
+
+```{r priortemp}
+#We need to compare information criterions when models that have the same number of data points. Since there is some missing data in prior_temp for some lizards, we will create a complete cases dataset based on this and run the two models with and without prior_temp. Complete dataset based on predictors has 2418 rows of data
+
+data %>% filter(complete.cases(log.temp) & complete.cases(log.mass) & complete.cases(log.prior_temp1)) %>% nrow
+
+b_complete_data <- data %>% filter(complete.cases(log.temp) & complete.cases(log.mass) & complete.cases(log.prior_temp1))
+
+modb.1 <- brm(log.co2pmin ~ log.mass + log.temp + log.prior_temp + (1|id) + (1|samp_period), data = b_complete_data) 
+modb.1 <- add_ic(modb.1, ic = c("loo","waic"))
+#saveRDS(modb.1, "output/RMD_output/rds/modb.1")
+
+plot(modb.1)
+hist(resid(modb.1))
+summary(modb.1)
+
+modb.2 <- brm(log.co2pmin ~ log.mass + log.temp  + (1|id) + (1|samp_period), data = b_complete_data) #Have to come back and change the name of prior_temp1, there is only one prior temp
+modb.2 <- add_ic(modb.2, ic = c("loo","waic"))
+#saveRDS(modb.2, "R/RMDs/output/modb.1")
+
+plot(modb.2)
+hist(resid(modb.2))
+summary(modb.2)
+
+#Information criterion comparisons
+modb.1<- readRDS("R/RMDs/output/modb.1")
+modb.2 <- readRDS("R/RMDs/output/modb.2")
+
+waic(modb.1, modb.2)         
+#                 WAIC    SE
+#modb.1          1789.22 88.32
+#modb.2          1795.73 87.77
+#modb.1 - modb.2   -6.52  5.51
+
+loo(modb.1, modb.2)
+#                 LOOIC    SE
+#modb.1          1789.44 88.33
+#modb.2          1795.97 87.78
+#modb.1 - modb.2   -6.52  5.51
+
+#Tabulating this result
+priortemp.dat <- data.frame(matrix(nrow  = 6, ncol = 4))
+colnames(priortemp.dat) <- c("Model", "IC_type", "Value", "SE")
+priortemp.dat$Model <- rep(c("modb.1", "modb.2", "modb.1 - modb.2"), 2)
+priortemp.dat$IC_type <- c(rep(c("wAIC", "loo"), each = 3))
+
+#wAIC
+priortemp.dat[1,3:4]<- round(waic(modb.1, modb.2)$modb.1$estimates[3,],2)
+priortemp.dat[2,3:4]<- round(waic(modb.1, modb.2)$modb.2$estimates[3,],2)
+priortemp.dat[3,3:4]<- round(waic(modb.1, modb.2)$ic_diffs__[1,],2)
+
+#loo
+priortemp.dat[4,3:4]<- round(loo(modb.1, modb.2)$modb.1$estimates[3,],2)
+priortemp.dat[5,3:4]<- round(loo(modb.1, modb.2)$modb.2$estimates[3,],2)
+priortemp.dat[6,3:4]<- round(loo(modb.1, modb.2)$ic_diffs__[1,],2)
+
+#write.csv(priortemp.dat, row.names = F,"R/RMDs/output/tabs/IC_priortemp_compare.csv")
+#Modelling containing prior_temp shows lower WAIC and LOO values, suggesting better fit of data. Prior_temp will be included as a covariate in subsequent analyses
+```
+
+### c) whether there are strong correlations between any of our predictor variables (i.e collinearity)
+Calculating correlations and then variance inflation factors following: Zuur, A. F., Ieno, E. N., & Elphick, C. S. (2010). A protocol for data exploration to avoid common statistical problems. Methods in Ecology ???, 1(1), 3???14. http://doi.org/10.1111/j.2041-210X.2009.00001.x
+
+```{r collinearity}
+c_collin_dat <- data %>% select(log.temp, z.log.mass, log.prior_temp1) %>% as.data.frame()
+
+ggscatmat(c_collin_dat)
+ggpairs(c_collin_dat)
+
+cor(c_collin_dat, use = "complete.obs")
+
+cors <- psych::corr.test(c_collin_dat, use = "complete") %>% print(short = F)
+#write.csv(cors, "R/RMDs/output/tabs/ESM_cortest.csv")
+# Looks like log.temp and prior temp are negatively correlated
+
+modc.1 <- lm(log.temp ~ log.mass + z.log.mass + log.prior_temp1, data = c_collin_dat)
+summary(modc.1)
+1/(1-summary(modc.1)$r.squared) #VIF 1.034542 
+
+modc.2 <- lm(log.temp ~ log.mass + z.log.mass, data = c_collin_dat)
+summary(modc.2)
+1/(1-summary(modc.2)$r.squared) #VIF  1.000175
+
+#Variance is only inflated a little so I think its no issue?? Smaller than recommended value of 3 therefore 
+```
+
+## d) comparing mass-scaling exponents from a hierarchical model vs. a typical metabolic scaling model
+
+```{r}
+#This function randomly selects one measurement per individual and runs a linear model to estimate mass-scaling exponents at each temperature
+average_ms <- function(temp){
+  dat <- data %>% filter(incb_temp == temp) %>% group_by(id) %>% sample_n(size = 1) %>% select(id, log.co2pmin , log.mass) %>% filter(! is.na(log.co2pmin)) %>% as.data.frame()
+  mod <- lm(log.co2pmin ~ log.mass, data = dat)
+  out <- summary(mod)
+  out <- as.data.frame(out$coefficients[,1:2])
+  out %<>% mutate(Temp = rep(temp, nrow(out)),
+           Type = c("Intercept", "Slope"),
+           lower = Estimate - 1.96*`Std. Error`,
+           upper = Estimate + 1.96*`Std. Error`)
+  return(out)
+}
+
+set.seed(43) #set seed so results are reproducible
+temps <- unique(data$incb_temp) %>% sort() 
+AI_ms_dat <- bind_rows(lapply(temps, function(i){ #Subsets data and runs model for each temperature
+  average_ms(temp = i)
+}))
+
+AI_ms_dat %<>% filter(Type == "Slope") %>% arrange(Temp) %>% select(Temp, Type, Estimate, `Std. Error`, lower, upper)
+
+#write.csv(AI_ms_dat, row.names = F, "R/RMDs/output/tabs/AI_ms_dat.csv")
+ 
+#Repeat this process ten times
+rep10_BI_ms_dat <- lapply(1:10, function(x){
+  bind_rows(lapply(temps, function(i) average_ms(i))) %>% filter(Type == "Slope") %>% arrange(Temp)
+})
+
+#Compare one single run with within- and among individual exponents in a plot
+#ggplot theme so plots look consistent
+my_theme <- theme_bw() + 
+  theme(legend.position = "none", 
+        legend.text = element_text(size = 10),
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=18),
+        strip.text =element_text(size=18)) 
+
+compareplot <- as.data.frame(matrix(ncol = 5, nrow = 6*3))
+colnames(compareplot) <- c("Temp", "Type", "Est", "Lower", "Upper")
+compareplot$Temp <- rep(seq(22,32, by =2), 3)
+compareplot$Type <- rep(c("Typical", "Among ID", "Within ID"), each = 6)
+
+#Linear model exponents
+#22C
+compareplot[1,3] <- AI_ms_dat[1,3]
+compareplot[1,4:5] <- AI_ms_dat[1,5:6]
+
+#24C
+compareplot[2,3] <- AI_ms_dat[2,3]
+compareplot[2,4:5] <- AI_ms_dat[2,5:6]
+
+#26C
+compareplot[3,3] <- AI_ms_dat[3,3]
+compareplot[3,4:5] <- AI_ms_dat[3,5:6]
+
+#28C
+compareplot[4,3] <- AI_ms_dat[4,3]
+compareplot[4,4:5] <- AI_ms_dat[4,5:6]
+
+#30C
+compareplot[5,3] <- AI_ms_dat[5,3]
+compareplot[5,4:5] <- AI_ms_dat[5,5:6]
+
+#32C
+compareplot[6,3] <- AI_ms_dat[6,3]
+compareplot[6,4:5] <- AI_ms_dat[6,5:6]
+
+#Between subject effects
+#Read in model output
+mod.ms.1 <- readRDS("output/RMD_output/rds/mod.ms.1")
+mod.ms.1.fixed <- as.matrix(posterior_samples(mod.ms.1, "^b_")) #Selecting the fixed effects
+
+#Amoung ID effects
+#22C
+compareplot[7,3:5] <- posterior_summary(mod.ms.1.fixed)[7,c(1,3:4)]
+
+#24C
+compareplot[8,3] <- mean(mod.ms.1.fixed[,7] + mod.ms.1.fixed[,9])
+compareplot[8,4:5] <-HPDinterval(as.mcmc(mod.ms.1.fixed[,7] + mod.ms.1.fixed[,9]))
+
+#26C
+compareplot[9,3] <- mean(mod.ms.1.fixed[,7] + mod.ms.1.fixed[,10])
+compareplot[9,4:5] <- HPDinterval(as.mcmc(mod.ms.1.fixed[,7] + mod.ms.1.fixed[,10]))
+
+#28
+compareplot[10,3] <- mean(mod.ms.1.fixed[,7] + mod.ms.1.fixed[,11])
+compareplot[10,4:5] <-  HPDinterval(as.mcmc(mod.ms.1.fixed[,7] + mod.ms.1.fixed[,11]))
+
+#30
+compareplot[11,3] <- mean(mod.ms.1.fixed[,7] + mod.ms.1.fixed[,12])
+compareplot[11,4:5] <- HPDinterval(as.mcmc(mod.ms.1.fixed[,7] + mod.ms.1.fixed[,12]))
+
+#32
+compareplot[12,3] <- mean(mod.ms.1.fixed[,7] + mod.ms.1.fixed[,13])
+compareplot[12,4:5] <- HPDinterval(as.mcmc(mod.ms.1.fixed[,7] + mod.ms.1.fixed[,13]))
+
+#Within ID effects
+#22C
+#22C
+compareplot[13,3] <- mean(mod.ms.1.fixed[,8])
+compareplot[13,4:5] <- HPDinterval(as.mcmc(mod.ms.1.fixed[,8]))
+
+#24C
+compareplot[14,3] <- mean(mod.ms.1.fixed[,8] + mod.ms.1.fixed[,14])
+compareplot[14,4:5] <- HPDinterval(as.mcmc(mod.ms.1.fixed[,8] + mod.ms.1.fixed[,14]))
+
+#26C
+compareplot[15,3] <- mean(mod.ms.1.fixed[,8] + mod.ms.1.fixed[,15])
+compareplot[15,4:5] <- HPDinterval(as.mcmc(mod.ms.1.fixed[,8] + mod.ms.1.fixed[,15]))
+
+#28
+compareplot[16,3] <- mean(mod.ms.1.fixed[,8] + mod.ms.1.fixed[,16])
+compareplot[16,4:5] <- HPDinterval(as.mcmc(mod.ms.1.fixed[,8] + mod.ms.1.fixed[,16]))
+
+#30
+compareplot[17,3] <- mean(mod.ms.1.fixed[,8] + mod.ms.1.fixed[,17])
+compareplot[17,4:5] <- HPDinterval(as.mcmc(mod.ms.1.fixed[,8] + mod.ms.1.fixed[,17]))
+
+#32
+compareplot[18,3] <- mean(mod.ms.1.fixed[,8] + mod.ms.1.fixed[,18])
+compareplot[18,4:5] <- HPDinterval(as.mcmc(mod.ms.1.fixed[,8] + mod.ms.1.fixed[,18]))
+
+#write.csv(compareplot, "output/table/pT/Hierarchical_MS_scaling_compare.csv")
+
+compareplot$Type <- factor(compareplot$Type, levels(factor(compareplot$Type))[c(1,3,2)]) 
+
+ggplot(compareplot, aes(y = Est, x = Temp)) +
+  geom_errorbar(aes(colour = Type, ymin = Lower, ymax = Upper), width = 0, position = position_dodge(1.5)) +
+  geom_point(aes(fill = Type, shape = Type), size = 4, position = position_dodge(1.5)) + 
+  geom_hline(aes(yintercept = 0.83), linetype = 2) +
+  geom_hline(aes(yintercept = 0), linetype = "dotted") +
+  scale_color_manual(values = c(rep("black", 4))) + 
+  scale_shape_manual(values= c(24, 22, 23)) + 
+  scale_fill_manual(values= c("black", "black", "grey")) +
+  labs(x = "Temperature", y = "Mass-scaling exponent estimate") + 
+  theme_bw() +
+  scale_x_continuous(breaks = seq(22,32, by = 2)) +
+  scale_y_continuous(breaks = seq(-3.5,3.5, by = 0.5)) +
+  my_theme +
+  theme(legend.position = c(0.90, 0.10),
+        legend.box.background = element_rect(colour = "black")) 
+
+```
+
+### e) Does metabolic rate and body mass change over time (due to habituation) 
+Plot of metabolic rate vs time, so overall - yes metabolic rate and body mass decreased over time but intercepts were still repeatable after accounting for variation attributed to sampling session (i.e Rlongterm).
+```{r}
+my_theme <- theme_bw() + 
+  theme(legend.position = "none", 
+        legend.text = element_text(size = 10),
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=18),
+        strip.text =element_text(size=18))
+
+colfunc <- colorRampPalette(c("#159FEC", "#E66726")) #Creating 42 unique shades
+
+data %>% 
+  ggplot(aes(x = samp_period, y = log.co2pmin, group = id)) + 
+  geom_point(shape = 20, alpha = 0.1) + 
+  geom_smooth(aes(color = id), method = "lm", se = F, size = 0.5) + 
+  scale_color_manual(values = colfunc(42)) +
+  scale_x_continuous(breaks = c(seq(1,10))) + 
+  facet_wrap(~incb_temp) +
+  labs(x = "Sampling session", y = expression(~Log~metabolic~rate~(VCO[2]))) + 
+  my_theme
+
+data %>% 
+  ggplot(aes(x = samp_period, y = log.mass, group = id)) + 
+  geom_point(shape = 20, alpha = 0.1) + 
+  geom_smooth(aes(color = id), method = "lm", se = F, size = 0.5) + 
+  scale_color_manual(values = colfunc(42)) +
+  scale_x_continuous(breaks = c(seq(1,10))) + 
+  labs(x = "Sampling session", y = expression(~Log~body~mass~(g))) + 
+  facet_wrap(~incb_temp) +
+  my_theme
+
+```

@@ -1,0 +1,337 @@
+---
+title: "Code for character-state model using ???brms??? to estimate repeatability and cross-temperature correlations"
+author: "Fonti Kar"
+date: "08/12/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, include = T)
+rm(list=ls())
+sessionInfo()
+#R version 3.4.2 (2017-09-28)
+#Platform: x86_64-apple-darwin15.6.0 (64-bit)
+#Running under: macOS High Sierra 10.13.6
+
+packages.need <- c("ggplot2", "tidyverse", "magrittr", "brms", "corrplot")
+lapply(packages.need, require, character.only = TRUE)
+
+```
+
+The code below is uses a character-state approach in the brms package to estimate: 
+a) adjusted repeatability (sensu Nakagawa & Schielzeth, 2010) of VCO2 at each measurement temperature 
+b) among- and within-individual variance components at each measurement temperature
+c) cross-temperature correlations (sensu Brommer 2013) of VCO2 between each measurement temperature at the among- and within-individual level
+
+## Read in wide format data first and source helper functions
+
+```{r load data}
+data <- read.csv("R/RMDs/Wide_data_for_analysis.csv")
+data %<>% filter(complete.cases(.))
+
+source("R/functions/unpacking.R")
+```
+
+### Multivariate response model
+```{r}
+cs_mvmod.t22 <- bf(t_22 ~ zlogmass.22 + log.prior_temp22 + (1|p|id) + (1|s|samp_period))
+cs_mvmod.t24 <- bf(t_24 ~ zlogmass.24 + log.prior_temp24 + (1|p|id) + (1|s|samp_period))
+cs_mvmod.t26 <- bf(t_26 ~ zlogmass.26 + log.prior_temp26 + (1|p|id) + (1|s|samp_period))
+cs_mvmod.t28 <- bf(t_28 ~ zlogmass.28 + log.prior_temp28 + (1|p|id) + (1|s|samp_period))
+cs_mvmod.t30 <- bf(t_30 ~ zlogmass.30 + log.prior_temp30 + (1|p|id) + (1|s|samp_period))
+cs_mvmod.t32 <- bf(t_32 ~ zlogmass.32 + log.prior_temp32 + (1|p|id) + (1|s|samp_period))
+
+cs_mvmod <- brm(formula = cs_mvmod.t22 + cs_mvmod.t24 + cs_mvmod.t26 + cs_mvmod.t28 + cs_mvmod.t30 + cs_mvmod.t32,
+                     data = data, family = gaussian(), cores = 3)
+
+#saveRDS(cs_mvmod, "output/RMD_output/rds/cs_mvmod") 
+```
+
+### Thermal repeatability of VCO2 at each measurement temperature
+
+```{r}
+#Read in model output
+cs_mvmod <- readRDS("R/RMDs/output/cs_mvmod")
+
+#Diagnostics
+plot(cs_mvmod)
+summary(cs_mvmod)
+
+#Function for calculating repeatability for a character-state brms model
+#Repeatability Equation = BtID / (BtID + session + withinID) 
+brms_rpt <- function(model.rds.name = cs_mvmod, temp = 22){
+  y <- posterior_samples(model.rds.name)
+  temp <- temp
+  
+  Vbetween <- paste0("sd_id__t", temp, "_Intercept")
+  Vsession <- paste0("sd_samp_period__t", temp, "_Intercept")
+  Vresidual <- paste0("sigma_t", temp)
+  R <- y[names(y) == Vbetween] /(y[names(y) == Vbetween] + y[names(y) == Vsession] + y[names(y) == Vresidual])
+  
+  rpt_tab <- as.data.frame(matrix(nrow = 1, ncol = 4))
+  rownames(rpt_tab) <- paste0("R_t_",temp)
+  colnames(rpt_tab) <- colnames(posterior_summary(as.matrix(R)))
+  rpt_tab[1,1:4] <- posterior_summary(as.matrix(R))
+  return(rpt_tab)
+}
+
+#Repeatability at each temperatures
+brms_output_rpt <- rbind(brms_rpt(cs_mvmod, temp = 22),
+                         brms_rpt(cs_mvmod, temp = 24),
+                         brms_rpt(cs_mvmod, temp = 26),
+                         brms_rpt(cs_mvmod, temp = 28),
+                         brms_rpt(cs_mvmod, temp = 30),
+                         brms_rpt(cs_mvmod, temp = 32))
+```
+
+### Among- and within-individual variance components at each measurement temperature
+
+```{r}
+#Compile a dataframe
+varcomps <- as.data.frame(matrix(nrow = 12, ncol = 6))
+colnames(varcomps) <- c("Type", "Temp", "Mean", "Est.Error", "lower", "upper")
+varcomps[,1] <- rep(c("Among_ID","Within_ID"), each= 6)
+varcomps[,2] <- rep(seq(22,32, by = 2), 2)
+
+#Among ID variance componenents + CI
+varcomps[1:6,3:6] <- posterior_summary(cs_mvmod, "^sd_id")
+
+#Within ID variance components + CI
+varcomps[7:12,3:6] <- posterior_summary(cs_mvmod, "^sigma") 
+
+#write.csv(varcomps, row.names = F, "R/RMDs/output/tabs/Table2.csv")
+```
+
+### Cross-temperature correlations
+
+```{r}
+#Among ID correlations
+brms_amongID <- as.data.frame(matrix(nrow = 6, ncol= 6))
+colnames(brms_amongID) <-  seq(22,32, by = 2)
+rownames(brms_amongID) <-  seq(22,32, by = 2)
+diag(brms_amongID) <- rep(1, 6)
+
+#Posterior means
+#t22 
+brms_amongID[2:6,1] <- brms_amongID[1,2:6] <- posterior_summary(cs_mvmod, "cor_id__t22")[,1]
+
+#t24
+brms_amongID[3:6,2] <- brms_amongID[2,3:6] <- posterior_summary(cs_mvmod, "cor_id__t24")[,1]
+
+#t26
+brms_amongID[4:6,3] <- brms_amongID[3,4:6] <- posterior_summary(cs_mvmod, "cor_id__t26")[,1]
+
+#t28
+brms_amongID[5:6,4] <- brms_amongID[4,5:6] <- posterior_summary(cs_mvmod, "cor_id__t28")[,1]
+
+#t30
+brms_amongID[6,5] <- brms_amongID[5,6] <- posterior_summary(cs_mvmod, "cor_id__t30")[,1]
+
+#Credible intervals for variance and correlations
+posterior_summary(cs_mvmod, "^sd_id") 
+posterior_summary(cs_mvmod, "cor_id") 
+
+#Within ID correlations
+brms_withinID <- as.data.frame(matrix(nrow = 6, ncol= 6))
+colnames(brms_withinID) <-  as.factor(seq(22,32, by = 2))
+rownames(brms_withinID) <- as.factor(seq(22,32, by = 2))
+diag(brms_withinID) <- rep(1, 6)
+
+#Posterior means
+#t22
+brms_withinID[2:6,1] <- brms_withinID[1,2:6] <- posterior_summary(cs_mvmod, "rescor__t22")[,1]
+
+#t24
+brms_withinID[3:6,2] <- brms_withinID[2,3:6] <- posterior_summary(cs_mvmod, "rescor__t24")[,1]
+
+#t26
+brms_withinID[4:6,3] <- brms_withinID[3,4:6] <-posterior_summary(cs_mvmod, "rescor__t26")[,1]
+
+#t28
+brms_withinID[5:6,4] <- brms_withinID[4,5:6] <-posterior_summary(cs_mvmod, "rescor__t28")[,1]
+
+#t30
+brms_withinID[6,5] <- brms_withinID[5,6] <-posterior_summary(cs_mvmod, "rescor__t30")[,1]
+
+#Credible intervals for variance and correlations
+Table3c <- posterior_summary(cs_mvmod, "cor_id")[,c(1,3,4)] 
+Table3d<- posterior_summary(cs_mvmod, "rescor_")[,c(1,3,4)]
+
+write.csv(Table3c, 'R/RMDs/output/Table3c_amoungID.csv')
+#write.csv(Table3d, 'R/RMDs/output/Table3c_withinID.csv')
+```
+
+### Code to generate Figure 2B, Fig 3B, Fig 4 (Bottom panel)
+
+```{r}
+#Theme for all ggplots
+my_theme <- theme_bw() + 
+  theme(legend.position = "none", 
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 12),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=18),
+        strip.text =element_text(size=18)) 
+
+#Fig 2B Variance components
+ggplot(data = varcomps, aes(x = Temp, y = Mean)) +
+  geom_point(size = 4) + 
+  geom_errorbar(aes(ymax = upper, ymin = lower), width = 0) + 
+  scale_x_continuous(breaks = c(22, 24, 26, 28, 30, 32)) + 
+  facet_wrap(~Type) + 
+  labs(y = expression("Variance"), x = expression(paste("Temperature ",degree,"C"))) + my_theme
+
+#Fig 3B Reaction norms character state approach
+#Session 1
+all_ids <- unique(data$id) %>% sort()
+s1_22 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                  id = i,
+                                                  samp_period = 1, 
+                                                  temp = 22))
+
+
+s1_24 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                  id = i,
+                                                  samp_period = 1, 
+                                                  temp = 24))
+
+s1_26 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                  id = i,
+                                                  samp_period = 1, 
+                                                  temp = 26))
+
+s1_28 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                  id = i,
+                                                  samp_period = 1, 
+                                                  temp = 28))
+
+s1_30 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                  id = i,
+                                                  samp_period = 1, 
+                                                  temp = 30))
+
+s1_32 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                  id = i,
+                                                  samp_period = 1, 
+                                                  temp = 32))
+
+s1_posterior_predictions <- bind_rows(s1_22, s1_24, s1_26, s1_28, s1_30, s1_32) 
+
+cs_preds_s1 <- s1_posterior_predictions %>% group_by(lizard, samp_period, temp) %>% summarise(mean.pred = mean(prediction), lower = as.numeric(HPDinterval(as.mcmc(prediction))[,1]), upper = as.numeric(HPDinterval(as.mcmc(prediction))[,2])) %>% as.data.frame()
+
+#Session 5
+s5_22 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                 id = i,
+                                                 samp_period = 5, 
+                                                 temp = 22))
+
+
+s5_24 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                 id = i,
+                                                 samp_period = 5, 
+                                                 temp = 24))
+
+s5_26 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                 id = i,
+                                                 samp_period = 5, 
+                                                 temp = 26))
+
+s5_28 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                 id = i,
+                                                 samp_period = 5, 
+                                                 temp = 28))
+
+s5_30 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                 id = i,
+                                                 samp_period = 5, 
+                                                 temp = 30))
+
+s5_32 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                 id = i,
+                                                 samp_period = 5, 
+                                                 temp = 32))
+
+s5_posterior_predictions <- bind_rows(s5_22, s5_24, s5_26, s5_28, s5_30, s5_32) 
+
+cs_preds_s5 <- s5_posterior_predictions %>% group_by(lizard, samp_period, temp) %>% summarise(mean.pred = mean(prediction), lower = as.numeric(HPDinterval(as.mcmc(prediction))[,1]), upper = as.numeric(HPDinterval(as.mcmc(prediction))[,2])) %>% as.data.frame() 
+
+#Session 10
+s10_22 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                  id = i,
+                                                  samp_period = 10, 
+                                                  temp = 22))
+
+
+s10_24 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                  id = i,
+                                                  samp_period = 10, 
+                                                  temp = 24))
+
+s10_26 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                  id = i,
+                                                  samp_period = 10, 
+                                                  temp = 26))
+
+s10_28 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                  id = i,
+                                                  samp_period = 10, 
+                                                  temp = 28))
+
+s10_30 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                  id = i,
+                                                  samp_period = 10, 
+                                                  temp = 30))
+
+s10_32 <-lapply(all_ids, function(i) pred.log.MR(model = cs_mvmod,
+                                                  id = i,
+                                                  samp_period = 10, 
+                                                  temp = 32))
+
+posterior_predictions_s10 <- bind_rows(s10_22, s10_24, s10_26, s10_28, s10_30, s10_32) 
+
+cs_preds_s10 <- posterior_predictions_s10 %>% group_by(lizard, samp_period, temp) %>% summarise(mean.pred = mean(prediction), lower = as.numeric(HPDinterval(as.mcmc(prediction))[,1]), upper = as.numeric(HPDinterval(as.mcmc(prediction))[,2])) %>% as.data.frame() 
+
+#BIND EVERYTHING TOGETHER
+cs_preds_all <- bind_rows(cs_preds_s1,
+                          cs_preds_s5,
+                          cs_preds_s10)
+
+saveRDS(cs_preds_all, "R/RMDs/output/cs_mvmod.BLUP.predictions.csv")
+cs_preds_all <- readRDS("R/RMDs/output/cs_mvmod.BLUP.predictions.csv")
+#Plot of reaction norms at sampling period 1, 5, 10 and show slopes are repeatable over time
+colfunc <- colorRampPalette(c("#159FEC", "#E66726")) #Creating 42 unique shades
+
+cs_preds_all %>% 
+  ggplot(aes(x = temp, y = mean.pred, color = lizard)) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") + 
+  geom_line(aes(group = lizard, colour = lizard), alpha = 0.7) +
+  scale_x_continuous(breaks = c(22, 24, 26, 28, 30, 32)) + 
+  scale_color_manual(values = colfunc(42)) +
+  facet_wrap(~ samp_period) + 
+  labs(x = expression(paste("Temperature ",degree,"C")), y = " ") + 
+  my_theme
+
+#Fig 4 Cross Temperature correlations character state approach
+#Among ID correlations
+cex.before <- par("cex")
+par(cex = 1.2)
+corrplot.mixed(as.matrix(brms_amongID), 
+               lower.col = "black", upper = "ellipse", 
+               tl.col = "black",
+               tl.cex = par("cex"))
+par(cex = cex.before)
+
+
+#Within ID correlations
+cex.before <- par("cex")
+par(cex = 1.2)
+corrplot.mixed(as.matrix(brms_withinID), 
+               lower.col = "black", upper = "ellipse", 
+               tl.col = "black",tl.cex = par("cex"))
+
+par(cex = cex.before)
+```
+
+
