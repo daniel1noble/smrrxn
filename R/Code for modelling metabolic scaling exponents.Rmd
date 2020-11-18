@@ -1,7 +1,7 @@
 ---
-title: "Code for modelling hierarchal variation in metabolic scaling exponents"
+title: "v2 Code for modelling metabolic scaling exponents"
 author: "Fonti Kar"
-date: "10/12/2018"
+date: "12/11/2019"
 output: html_document
 ---
 
@@ -19,10 +19,9 @@ lapply(packages.need, require, character.only = TRUE)
 ## Read in long format data first
 
 ```{r load data}
-data <- read.csv("R/RMDs/Long_data_for_analysis.csv")
+data <- read.csv("data/data_final/Long_data_ldeli_metabR.csv")
 str(data)
 dim(data)
-
 ```
 
 #Calculating among and within-individual mass deviations
@@ -30,38 +29,58 @@ For more details: van de Pol, M., & Wright, J. (2009). A simple method for disti
 
 ```{r}
 ms_data <- data %>% 
-  dplyr::select(id, samp_period, incb_temp, log.co2pmin, log.mass) %>%
+  dplyr::select(id, samp_period, incb_temp, rep_id, log.co2pmin, log.mass) %>%
   group_by(id) %>% 
   mutate(AMIlogmass = mean(log.mass, na.rm = T)) %>%  #Among ID effect
   mutate(WIlogmass = round(log.mass - AMIlogmass, 2)) %>%  #Within ID effect (Deviation of an individual's mass relative to its own mean)
   arrange(id, samp_period, incb_temp) %>% 
   as.data.frame() 
+
 str(ms_data)
+
+ms_data %<>% mutate(series_temp = paste0(id, "_", samp_period, "_", incb_temp))
+
+
 ```
 
 #Code to modelling the scaling relationship between metabolic rate and among- and within- individual mass effects and to test temeprature dependence
 ```{r}
-#With interaction with temperature
-mod.ms.1a <- brm(log.co2pmin ~ as.factor(incb_temp)*AMIlogmass + as.factor(incb_temp)*WIlogmass + (1 + WIlogmass|id), 
-            data = ms_data,
-            family = gaussian(),
-            cores = 3)
+#Model set up
+iter = 5000
+warmup = iter/2
+thin = 5 
 
-mod.ms.1a <- add_ic(mod.ms.1a, ic = c("loo","waic"))
-#saveRDS(mod.ms.1a, "R/RMDs/output/mod.ms.1a") 
+#With interaction with temperature
+mod.ms.1a <- brm(log.co2pmin ~ as.factor(incb_temp)*AMIlogmass + as.factor(incb_temp)*WIlogmass + (1 + WIlogmass|id) + (1 |s| series_temp), 
+                 data = ms_data,
+                 family = gaussian(),
+                 cores = 3,
+                 iter = iter, 
+                 warmup = warmup,
+                 thin = thin, 
+                 chains = 3)
+
+mod.ms.1a <- add_criterion(mod.ms.1a, criterion = c("loo","waic", "kfold"))
+mod.ms.1a <- add_criterion(mod.ms.1a, criterion = "kfold")
+#saveRDS(mod.ms.1a, "R/Revision/output/rds/mod.ms.1a") 
 
 #No interaction with temperature
-mod.ms.1b <- brm(log.co2pmin ~ as.factor(incb_temp) + AMIlogmass + WIlogmass + (1 + WIlogmass|id), 
-            data = ms_data,
-            family = gaussian(),
-            cores = 3)
+mod.ms.1b <- brm(log.co2pmin ~ as.factor(incb_temp) + AMIlogmass + WIlogmass + (1 + WIlogmass|id) + (1 |s|series_temp), 
+                 data = ms_data,
+                 family = gaussian(),
+                 cores = 3,
+                 iter = iter, 
+                 warmup = warmup,
+                 thin = thin, 
+                 chains = 3)
 
-mod.ms.1b <- add_ic(mod.ms.1b, ic = c("loo","waic"))
-#saveRDS(mod.ms.1b, "R/RMDs/output/mod.ms.1b") 
+mod.ms.1b <- add_criterion(mod.ms.1b, criterion = c("loo","waic", "kfold"))
+mod.ms.1b <- add_criterion(mod.ms.1b, criterion = "kfold")
+#saveRDS(mod.ms.1b, "R/Revision/output/rds/mod.ms.1b") 
 
 #Read in model output
-mod.ms.1a <- readRDS("R/RMDs/output/mod.ms.1a")
-mod.ms.1b <- readRDS("R/RMDs/output/mod.ms.1b")
+mod.ms.1a <- readRDS("R/Revision/output/rds/mod.ms.1a")
+mod.ms.1b <- readRDS("R/Revision/output/rds/mod.ms.1b")
 
 #Diagnostics
 plot(mod.ms.1a)
@@ -71,10 +90,18 @@ plot(mod.ms.1b)
 summary(mod.ms.1b)
 
 #Compare wAIC values
-waic(mod.ms.1a, mod.ms.1b)   
+waic(mod.ms.1a, mod.ms.1b)  
+loo_compare(waic(mod.ms.1a), waic(mod.ms.1b))   
 
 #Compare wloo values
 loo(mod.ms.1a, mod.ms.1b)  
+loo_compare(loo(mod.ms.1a), loo(mod.ms.1b))
+```
+
+## Among ID mass scaling
+```{r}
+mod.ms.1.fixed <- as.matrix(posterior_samples(mod.ms.1b, "^b_")) #Selecting the fixed effects
+posterior_summary(mod.ms.1.fixed[,"b_AMIlogmass"])
 ```
 
 ### Code to generate Figure 5A
@@ -194,16 +221,16 @@ mysubset <- sample(data$id, 20, replace = F)
 
 data %>% filter(id %in% mysubset) %>%
   ggplot(aes(x = log.mass  , y = log.co2pmin, group = "id")) + 
-  geom_point(shape = 21, aes(fill = id), size = 1.5, color = "black") + 
-  geom_line(aes(group = id), stat="smooth", method = "lm", alpha = 0.75, lwd = 0.45) +
+  geom_point(shape = 21, aes(fill = id), size = 1.5, color = "black", alpha = 0.5) + 
+  geom_line(aes(group = id), stat="smooth", method = "lm", alpha = 1, lwd = 0.5) +
   geom_line(stat = "smooth", method = "lm", alpha = 1, lwd = 1) +
   facet_grid(~ incb_temp) + 
   scale_fill_manual(values= my_cols) +
   scale_x_continuous(breaks = c(-0.20, 0, 0.20, 0.40)) +
   labs(x = expression(Log~Mass~(g)), y = expression(Log~Metabolic~rate~(VCO[2]~min^{-1}))) + 
   my_theme 
-
 ```
+
 
 ###Code to generate Table 4
 ```{r}
