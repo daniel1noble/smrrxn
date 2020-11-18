@@ -1,0 +1,264 @@
+---
+title: "v2 Code for random slope model"
+author: "Fonti Kar"
+date: "12/11/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list=ls())
+sessionInfo()
+#R version 3.4.2 (2017-09-28)
+#Platform: x86_64-apple-darwin15.6.0 (64-bit)
+#Running under: macOS High Sierra 10.13.6
+
+packages.need <- c("ggplot2", "tidyverse", "dplyr", "magrittr", "MCMCglmm", "brms", "RColorBrewer")
+
+lapply(packages.need, require, character.only = TRUE)
+
+
+source("R/functions/unpacking.R")
+source("R/functions/smr_functions.R")
+```
+
+The code below is uses a function-valued approach in the MCMCglmm package to calculate: 
+a) repeatability of the reaction norm slope (sensu Araya-Ajoy et al 2015) 
+
+## Read in long format data first and load helper functions
+
+```{r load data}
+data <- read.csv("data/data_final/Long_data_ldeli_metabR.csv")
+str(data)
+dim(data)
+
+source("R/functions/unpacking.R")
+source("R/functions/smr_functions.R")
+```
+
+##Complete data in predictors are needed
+
+```{r}
+complete_data <- data %>% filter(complete.cases(incb_temp) & complete.cases(z.log.mass) & complete.cases(prior_temp))
+str(complete_data)
+dim(complete_data)
+```
+###Expanded paramater prior for model and model set up 
+
+```{r}
+expanded.prior <- list(G = list(G1 = list(V = diag(2), nu = 0.002, alpha.V = diag(1000,2,2), alpha.mu = rep(0,2)),
+                                G2 = list(V = diag(2), nu = 0.002, alpha.V = diag(1000,2,2), alpha.mu = rep(0,2)),
+                                G3 = list(V = 1, nu = 0.002, alpha.V = 1000, alpha.mu = 0)),
+                       R = list(V = 1, nu = 0.002))
+
+
+#Number of iterations, burn in and thinning interval
+nitt = 7510000
+burnin = 10000
+thin = 5000
+```
+
+## The model
+
+```{r}
+mod1.2.1 <- mclapply(1:3, function(i) {
+  MCMCglmm(log.co2pmin ~ incb_temp + z.log.mass + prior_temp,
+           random = ~us(1+incb_temp):id + us(1+incb_temp):id:samp_period + id:samp_period:incb_temp,
+           rcov = ~id:samp_period:incb_temp:rep_id
+           family = "gaussian",
+           prior = expanded.prior,
+           nitt = nitt,
+           burnin = burnin,
+           thin = thin,
+           data = complete_data, 
+           verbose = T)
+}, mc.cores = 3)
+
+mod1.2.2 <- mclapply(1:3, function(i) {
+  MCMCglmm(log.co2pmin ~ incb_temp + z.log.mass + prior_temp,
+           random = ~us(1+incb_temp):id + us(1+incb_temp):series + id:samp_period:incb_temp,
+           family = "gaussian",
+           prior = expanded.prior,
+           nitt = nitt,
+           burnin = burnin,
+           thin = thin,
+           data = complete_data, 
+           pr = T,
+           verbose = T)
+}, mc.cores = 3)
+
+mod1.2.4 <- mclapply(1:3, function(i) {
+  MCMCglmm(log.co2pmin ~ incb_temp + z.log.mass + prior_temp,
+           random = ~us(1+incb_temp):id + us(1+incb_temp):series,
+           rcov = ~id:samp_period:incb_temp:rep_id,
+           family = "gaussian",
+           prior = expanded.prior,
+           nitt = nitt,
+           burnin = burnin,
+           thin = thin,
+           data = complete_data,
+           pr = T,
+           verbose = T)
+}, mc.cores = 3)
+```
+
+## Unpack
+## mod1.2.1
+
+```{r}
+#Read in model output and pool chains
+mod1.2.1 <- readRDS("R/Revision/output/rds/mod1.2.1")
+mod1.2.1.Sol <- Sol.unpack("R/Revision/output/rds/mod1.2.1")
+mod1.2.1.VCV <- VCV.unpack("R/Revision/output/rds/mod1.2.1")
+
+#Diagnostics
+#Sol.check("R/Revision/output/rds/mod1.2.1")
+#VCV.check("R/Revision/output/rds/mod1.2.1")
+
+#Summary of model output
+summary(mod1.2.1[[1]])
+str(mod1.2.1[[1]])
+posterior.mode(mod1.2.1[[1]]$VCV)
+
+#Calculating the repeatability of slope and credible intervals
+rpt.Slope.mean(mod1.2.1.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series")
+rpt.Slope.mode(mod1.2.1.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series")
+```
+
+# #Error in readRDS("R/Revision/output/rds/mod1.2.2") : 
+#   ReadItem: unknown type 192, perhaps written by later version of R
+```{r}
+#Read in model output and pool chains
+mod1.2.2 <- readRDS("R/Revision/output/rds/mod1.2.4")
+
+# #Error in readRDS("R/Revision/output/rds/mod1.2.2") : 
+#   ReadItem: unknown type 192, perhaps written by later version of R
+
+mod1.2.2.Sol <- Sol.unpack("R/Revision/output/rds/mod1.2.2")
+mod1.2.2.VCV <- VCV.unpack("R/Revision/output/rds/mod1.2.2")
+
+#Diagnostics
+Sol.check("R/Revision/output/rds/mod1.2.2")
+VCV.check("R/Revision/output/rds/mod1.2.2")
+
+#Calculating the repeatability of slope and credible intervals
+rpt.Slope.mean(mod1.2.2.VCV, "log.temp:log.temp.id", "log.temp:log.temp.series")
+```
+
+## mod1.2.4
+
+```{r}
+#Read in model output and pool chains
+mod1.2.4 <- readRDS("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+mod1.2.4.Sol <- Sol.unpack("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+mod1.2.4.VCV <- VCV.unpack("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+
+#Diagnostics
+Sol.check("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+VCV.check("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+
+#Summary of model output
+summary(mod1.2.4[[1]])
+str(mod1.2.4[[1]])
+posterior.mode(mod1.2.4[[1]]$VCV)
+colnames(mod1.2.4[[1]]$VCV)
+colnames(mod1.2.4[[1]]$Sol)
+
+#Calculating the repeatability of slope and credible intervals
+rpt.Slope.mean(mod1.2.4.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series")
+rpt.Slope.mode(mod1.2.4.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series")
+```
+
+
+### Model estimating BLUPS for each individual. This model is use for generating model predicted reaction norms
+
+```{r}
+mod1.2.3 <- mclapply(1:3, function(i) {
+  MCMCglmm(log.co2pmin ~ incb_temp + z.log.mass + prior_temp,
+           random = ~us(1+incb_temp):id + us(1+incb_temp):series + id:samp_period:incb_temp,
+           family = "gaussian",
+           prior = expanded.prior,
+           nitt = nitt,
+           burnin = burnin,
+           thin = thin,
+           data = complete_data, 
+           pr = T,
+           verbose = T)
+}, mc.cores = 3)
+
+
+# saveRDS(mod1.2.3 , "R/mod1.2.3")
+
+#Read in model output and pool chains
+mod1.2.3 <- readRDS("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+mod1.2.3.Sol <- Sol.unpack("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+mod1.2.3.VCV <- VCV.unpack("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+
+#Diagnostics
+Sol.check("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+VCV.check("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+
+```
+
+#Theme for all ggplots
+
+```{r}
+my_theme <- theme_bw() + 
+  theme(legend.position = "none", 
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 12),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=18),
+        strip.text =element_text(size=18)) 
+```
+        
+```{r}
+#Fig 3A Reaction norms character state approach
+mod1.2.3.Sol <- Sol.unpack("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+mod1.2.3.VCV <- VCV.unpack("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+
+# Here are the six incubator temperatures, 
+temps <- unique(data$incb_temp)
+
+#and the 42 lizard names
+ids <- data$id %>% as.character %>% unique %>% sort
+ids_2 <- ids[-9]
+
+output <- do.call("rbind", lapply(c(1,5,10), function(i){
+do.call("rbind", lapply(ids_2, get.predictions, post=cbind(mod1.2.3.Sol, mod1.2.3.VCV), sampling.period = i)) %>% 
+    mutate(sampling.period = i) %>%
+    arrange(Temperature, predicted) %>% 
+    mutate(Lizard = factor(Lizard, levels = unique(Lizard)))
+}))
+
+saveRDS(output, "R/RMDs/output/mod1.2.3.predictions.csv")
+output <- readRDS("R/RMDs/output/mod1.2.3.predictions.csv")
+
+#Plotting reaction norms for sample period 1,5,10
+reaction.norms <- output %>% group_by(Temperature, Lizard, sampling.period) %>% 
+  summarise(posterior.mean = mean(as.mcmc(predicted)), 
+            lower = as.numeric(HPDinterval(as.mcmc(predicted)))[1], 
+            upper = as.numeric(HPDinterval(as.mcmc(predicted)))[2])
+
+#Plot of reaction norms at sampling period 1, 5, 10 and show slopes are repeatable over time
+#pdf("output/fig/pT/repeatability_of_slope.pdf", 12,9)
+n <- length(ids_2)
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+
+set.seed(10)
+my_cols <- sample(col_vector, n, replace = F) ; pie(rep(1,n), col=my_cols)
+
+reaction.norms %>% 
+  ggplot(aes(x = Temperature, y = posterior.mean, color = Lizard)) + 
+  geom_point(shape = 1, fill = "white", size = 1, color = "black") + 
+  geom_line(aes(group = Lizard, colour = Lizard), stat="smooth", method = "lm", alpha = 0.7) +
+  scale_x_continuous(breaks = c(22, 24, 26, 28, 30, 32)) + 
+  scale_color_manual(values = my_cols) +
+  facet_wrap(~ sampling.period) + 
+  labs(x = expression(paste("Temperature ",degree,"C")), y = expression(~Log~metabolic~rate~(VCO[2]))) + 
+    my_theme
+```
+
+
