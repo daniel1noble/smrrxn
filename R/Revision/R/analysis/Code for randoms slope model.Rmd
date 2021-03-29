@@ -12,7 +12,7 @@ sessionInfo()
 #Platform: x86_64-apple-darwin15.6.0 (64-bit)
 #Running under: macOS High Sierra 10.13.6
 
-packages.need <- c("ggplot2", "tidyverse", "dplyr", "magrittr", "MCMCglmm", "brms", "RColorBrewer")
+packages.need <- c("ggplot2", "tidyverse", "dplyr", "magrittr", "MCMCglmm", "brms", "RColorBrewer", "latex2exp")
 
 lapply(packages.need, require, character.only = TRUE)
 
@@ -189,7 +189,7 @@ mod1.2.3 <- mclapply(1:3, function(i) {
 # saveRDS(mod1.2.3 , "R/mod1.2.3")
 
 #Read in model output and pool chains
-mod1.2.3 <- readRDS("R/Revision/output/rds/mod1.2.4_noidsampertemp")
+mod1.2.3 <- readRDS("R/Revision/output/rds/mod1.2.3")
 mod1.2.3.Sol <- Sol.unpack("R/Revision/output/rds/mod1.2.4_noidsampertemp")
 mod1.2.3.VCV <- VCV.unpack("R/Revision/output/rds/mod1.2.4_noidsampertemp")
 
@@ -250,14 +250,18 @@ col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_co
 set.seed(10)
 my_cols <- sample(col_vector, n, replace = F) ; pie(rep(1,n), col=my_cols)
 
-reaction.norms %>% 
+#Sample 10 random lizards
+set.seed(10)
+subset_ids <- sample(ids_2, 10)
+
+reaction.norms %>% filter(Lizard %in% subset_ids) %>% 
   ggplot(aes(x = Temperature, y = posterior.mean, color = Lizard)) + 
   geom_point(shape = 1, fill = "white", size = 1, color = "black") + 
   geom_line(aes(group = Lizard, colour = Lizard), stat="smooth", method = "lm", alpha = 0.7) +
   scale_x_continuous(breaks = c(22, 24, 26, 28, 30, 32)) + 
   scale_color_manual(values = my_cols) +
   facet_wrap(~ sampling.period) + 
-  labs(x = expression(paste("Temperature ",degree,"C")), y = expression(~Log~metabolic~rate~(VCO[2]))) + 
+  labs(x = expression(paste("Temperature ",degree,"C")), y = TeX("log VCO_2 mL min^{-1}")) + 
     my_theme
 ```
 

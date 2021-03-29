@@ -40,7 +40,7 @@ str(ms_data)
 
 ms_data %<>% mutate(series_temp = paste0(id, "_", samp_period, "_", incb_temp))
 
-
+complete.cases(ms_data) %>% janitor::tabyl()
 ```
 
 #Code to modelling the scaling relationship between metabolic rate and among- and within- individual mass effects and to test temeprature dependence

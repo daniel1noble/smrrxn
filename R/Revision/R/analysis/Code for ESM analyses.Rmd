@@ -13,8 +13,11 @@ sessionInfo()
 #Platform: x86_64-apple-darwin15.6.0 (64-bit)
 #Running under: macOS High Sierra 10.13.6
 
-packages.need <- c("ggplot2", "GGally", "tidyverse", "magrittr", "brms", "dplyr", "RColorBrewer")
+packages.need <- c("ggplot2", "GGally", "tidyverse", "magrittr", "brms", "dplyr", "RColorBrewer", "lubridate", "MCMCglmm", "coda")
 lapply(packages.need, require, character.only = TRUE)
+
+source("R/functions/unpacking.R")
+source("R/functions/smr_functions.R")
 ```
 
 The code below tests for:
@@ -27,7 +30,7 @@ e) comparing mass-scaling exponents from a hierarchical model vs. a typicalmetab
 
 ### Read in data
 ```{r read in data}
-data <- read.csv("~/Dropbox/1 - PhD/1 - smrrxn/data/data_final/Long_data_ldeli_metabR.csv")
+data <- read.csv("~/Dropbox/1 - PhD/1 - smrrxn/data/data_final/Long_data_ldeli_metabR.csv", stringsAsFactors = F)
 str(data)
 dim(data)
 ```
@@ -180,7 +183,7 @@ priortemp.dat[3,3:4]<- round(loo_compare(waic(modb.1), waic(modb.2))[2,],2)
 Calculating correlations and then variance inflation factors following: Zuur, A. F., Ieno, E. N., & Elphick, C. S. (2010). A protocol for data exploration to avoid common statistical problems. Methods in Ecology ???, 1(1), 3???14. http://doi.org/10.1111/j.2041-210X.2009.00001.x
 
 ```{r collinearity}
-c_collin_dat <- data %>% select(incb_temp, log.mass, z.log.mass, prior_temp) %>% as.data.frame()
+c_collin_dat <- data %>% select(incb_temp, log.mass, prior_temp) %>% as.data.frame()
 
 ggscatmat(c_collin_dat)
 ggpairs(c_collin_dat)
@@ -244,22 +247,13 @@ summ %<>% mutate(mass_diff = session_1 - session_10,
                  percent_diff = (abs(session_1 - session_10)/session_1)*100)
 summary(summ)
 
-#Creating 42 unique colours
-n <- 42
-qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
-col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+#Merge weigh loss in percent into data and run a model
+data <- left_join(data, select(summ, id, percent_diff))
 
-set.seed(10)
-my_cols <- sample(col_vector, n, replace = F) ; pie(rep(1,n), col=my_cols)
+massloss_mod <- brm(log.co2pmin ~ scale(percent_diff) + log.mass + incb_temp + (1 | id) + (1| series) + (1|temp_series),
+                data = data)
 
- data %>% 
-  ggplot(aes(x = samp_period, y = log.mass, group = id)) + 
-  geom_point(shape = 20, alpha = 0.1) + 
-  geom_smooth(aes(color = id), method = "lm", se = F, size = 0.5) + 
-  scale_color_manual(values = my_cols) +
-  scale_x_continuous(breaks = c(seq(1,10))) + 
-  labs(x = "Sampling session", y = expression(~Log~body~mass~(g))) + 
-  my_theme
+saveRDS(massloss_mod, "R/Revision/output/rds/massloss_mod")
 ```
 
 
@@ -501,5 +495,201 @@ ggplot(data = all_comps_noME, aes(x = Temp, y = Mean)) +
   facet_wrap(~Type) + 
   labs(y = expression("Variance"), x = expression(paste("Temperature ",degree,"C"))) + my_theme
 ```
+
+## Differences in collection sites 
+```{r}
+meta_data <- read.csv("~/Dropbox/1 - PhD/1 - smrrxn/data/data_final/archive/male_population.csv", stringsAsFactors = F)
+
+str(meta_data)
+names(meta_data)
+
+#Rename ID and liz capature date so its easy to merge later on
+meta_data %<>% rename(id = liz_id,
+                      site = liz_collect_site,
+                      capture_date = liz_capture_date)
+
+#Merge
+data <- left_join(data, meta_data %>% select(id,site, capture_date))
+
+#Plot MR ~ Mass facet by site
+ggplot(data, aes(x = exp(log.mass))) + 
+  geom_histogram() + 
+  facet_wrap(~site)
+
+ggplot(data, aes(x = exp(log.co2pmin))) + 
+  geom_histogram() + 
+  facet_wrap(~site)
+
+#Run quick model to test site differences account for ID differences and sampling period
+site_mod <- brm(log.co2pmin ~ site + log.mass + incb_temp + (1 | id) + (1| series) + (1|temp_series),
+                data = data)
+
+#saveRDS(site_mod, "R/Revision/output/rds/site_mod")
+```
+
+## Time interval with capture date and first measurements
+
+```{r}
+#Format date
+data %<>% mutate(date = dmy(date),
+                 capture_date = dmy(capture_date)) 
+
+#Calculate difference
+data %<>% mutate(captive_interval = as.numeric(date-capture_date))
+
+#Get 1st session only
+data %>% filter(samp_period == "1") %>% janitor::tabyl(captive_interval)
+data %>% filter(samp_period == "1") %>% pull(captive_interval) %>% summary()
+
+
+ggplot(data, aes(x= captive_interval, y = log.co2pmin)) + 
+  geom_point()
+
+habituation_mod <- brm(log.co2pmin ~ scale(captive_interval) + log.mass + incb_temp + (1 | id) + (1| series) + (1|temp_series),
+                data = data)
+
+saveRDS(habituation_mod, "R/Revision/output/rds/habituation_mod")
+```
+
+
+##Subset analysis and recommendations for repeatability
+```{r}
+#Ok we need a function to subset randomly the # of sampling sessions and 2,4,7,10 number of sessions and run the random slope model
+library(tidyr)
+
+#This is the model for running the random slope model
+num_sessions = 2
+data = data
+expanded.prior <- list(G = list(G1 = list(V = diag(2), nu = 0.002, alpha.V = diag(1000,2,2), alpha.mu = rep(0,2)),
+                                G2 = list(V = diag(2), nu = 0.002, alpha.V = diag(1000,2,2), alpha.mu = rep(0,2))),
+                       R = list(V = 1, nu = 0.002))
+
+#Number of iterations, burn in and thinning interval
+nitt = 7510000
+burnin = 10000
+thin = 5000
+
+subset_func <- function(num_sessions, 
+                        data, 
+                        nitt = 7510,
+                        burnin = 10,
+                        thin = 50,
+                        prior = expanded.prior,
+                        num_chains = 1){
+  
+  #Randomly select the sessions
+  tot_sessions <- unique(data$samp_period)
+  subsets_need <- sample(tot_sessions, size = num_sessions)
+  
+  #Subset the data
+  subset <- dplyr::filter(data, samp_period %in% subsets_need)
+  
+  #Make subset data  complete
+  complete_subset<- subset %>% dplyr::filter(complete.cases(incb_temp) & complete.cases(z.log.mass) & complete.cases(prior_temp))
+  
+#The parallel function
+mod <- parallel::mclapply(1:num_chains, function(i) {
+  MCMCglmm::MCMCglmm(log.co2pmin ~ incb_temp + z.log.mass + prior_temp,
+           random = ~us(1+incb_temp):id + us(1+incb_temp):series,
+           rcov = ~id:samp_period:incb_temp:rep_id,
+           family = "gaussian",
+           prior = prior,
+           nitt = nitt,
+           burnin = burnin,
+           thin = thin,
+           data = complete_subset,
+           pr = T,
+           verbose = T)
+}, mc.cores = 3)
+
+saveRDS(mod, 
+        file = paste0("R/Revision/output/rds/", num_sessions, "sessions", "_mod")) 
+
+}
+
+#Run for 2 sessions
+set.seed(7)
+subset_func(num_sessions, 
+            data = data, 
+            nitt = 7510,
+            burnin = 10,
+            thin = 50,
+            prior = expanded.prior,
+            num_chains = 3)
+
+
+#Repeatabily of the slope with different number of sessions
+#2 sessions
+session_2_mod.VCV <- VCV.unpack("R/Revision/output/rds/2sessions_mod")
+sesh2_mod <- readRDS("R/Revision/output/rds/2sessions_mod")
+rpt.Slope.mean(session_2_mod.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series")
+
+#4 sessions
+session_4_mod.VCV <- VCV.unpack("R/Revision/output/rds/4sessions_mod")
+sesh4_mod <- readRDS("R/Revision/output/rds/4sessions_mod")
+rpt.Slope.mean(session_4_mod.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series")
+
+#6 sessions
+session_6_mod.VCV <- VCV.unpack("R/Revision/output/rds/6sessions_mod")
+sesh6_mod <- readRDS("R/Revision/output/rds/6sessions_mod")
+rpt.Slope.mean(session_6_mod.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series")
+
+#8 sessions
+session_8_mod.VCV <- VCV.unpack("R/Revision/output/rds/8sessions_mod")
+sesh8_mod <- readRDS("R/Revision/output/rds/8sessions_mod")
+rpt.Slope.mean(session_8_mod.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series")
+
+#All sessions
+mod1.2.1.VCV <- VCV.unpack("R/Revision/output/rds/mod1.2.1")
+mod1.2.1.mod <- readRDS("R/Revision/output/rds/mod1.2.1")
+
+#Compile and plot
+compare_rpt_sessions <- bind_rows(rpt.Slope.mean(session_2_mod.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series"),
+          rpt.Slope.mean(session_4_mod.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series"),
+          rpt.Slope.mean(session_6_mod.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series"),
+          rpt.Slope.mean(session_8_mod.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series"),
+          rpt.Slope.mean(mod1.2.1.VCV, "incb_temp:incb_temp.id", "incb_temp:incb_temp.series"),)
+
+#Create a variable that distinguishes between rows
+compare_rpt_sessions$Number_of_Sessions <- seq(2,10, by = 2)
+
+#What are the sample sizes for each 
+sesh2_mod[[1]]$Residual$nrl #Sample size
+sesh4_mod[[1]]$Residual$nrl #Sample size
+sesh6_mod[[1]]$Residual$nrl #Sample size
+sesh8_mod[[1]]$Residual$nrl #Sample size
+mod1.2.1.mod[[1]]$Residual$nrl  #Sample size
+
+#Plot this for the reviewers
+#Theme
+my_theme <- theme_bw() + 
+  theme(legend.position = "none", 
+        legend.text = element_text(size = 10),
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=18),
+        strip.text =element_text(size=18)) 
+
+#compare_rpt_sessions %<>% mutate(Number_of_Sessions = as.factor(Number_of_Sessions))
+
+ggplot(data = compare_rpt_sessions, aes(x = Number_of_Sessions, y = estimate)) + 
+  geom_point(size = 2) + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0) + 
+  labs(x = "Number of Sessions", y = "Estimate of Repeatability of Slope") + 
+  theme_bw() +
+  my_theme
+  
+sesh2_mod[[1]] %>% summary()
+sesh4_mod[[1]] %>% summary()
+sesh6_mod[[1]] %>% summary()
+sesh8_mod[[1]] %>% summary()
+mod1.2.1.mod[[1]] %>% summary()
+  
+
+```
+
+
 
 
